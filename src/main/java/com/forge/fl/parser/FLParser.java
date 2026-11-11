@@ -9,6 +9,17 @@ import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 
 public class FLParser implements PsiParser {
+    private static boolean isMetadataClauseKeyword(String text) {
+        return "doc".equals(text)
+                || "category".equals(text)
+                || "version".equals(text)
+                || "param".equals(text)
+                || "alias".equals(text)
+                || "aliases".equals(text)
+                || "see-also".equals(text)
+                || "seeAlso".equals(text);
+    }
+
     @NotNull
     @Override
     public ASTNode parse(@NotNull IElementType root, @NotNull PsiBuilder builder) {
@@ -66,7 +77,7 @@ public class FLParser implements PsiParser {
                         builder.advanceLexer();
                         break;
                     }
-                    if (current == FLTokenTypes.KEYWORD && ":".equals(builder.getTokenText())) {
+                    if (current == FLTokenTypes.KEYWORD && isMetadataClauseKeyword(builder.getTokenText())) {
                         PsiBuilder.Marker clause = builder.mark();
                         builder.advanceLexer();
                         while (!builder.eof()) {
@@ -77,12 +88,12 @@ public class FLParser implements PsiParser {
                             }
                             builder.advanceLexer();
                         }
-                        clause.done(FLTokenTypes.METADATA);
+                        clause.done(FLTokenTypes.METADATA_CLAUSE);
                         continue;
                     }
                     builder.advanceLexer();
                 }
-                metadata.done(FLTokenTypes.METADATA);
+                metadata.done(FLTokenTypes.METADATA_BLOCK);
                 continue;
             }
 

@@ -39,7 +39,8 @@ public class FLSyntaxHighlighter extends SyntaxHighlighterBase {
         fillMap(ATTRS, FLTokenTypes.KEYWORDS, FL_KEYWORD);
         ATTRS.put(FLTokenTypes.BOOLEAN, FL_BOOLEAN);
         ATTRS.put(FLTokenTypes.IDENTIFIER, FL_IDENTIFIER);
-        ATTRS.put(FLTokenTypes.METADATA, FL_METADATA);
+        ATTRS.put(FLTokenTypes.METADATA_BLOCK, FL_METADATA);
+        ATTRS.put(FLTokenTypes.METADATA_CLAUSE, FL_METADATA);
         ATTRS.put(TokenType.BAD_CHARACTER, FL_BAD_CHARACTER);
     }
 

@@ -13,7 +13,9 @@ public final class FLTokenTypes {
     public static final IElementType DEFINITION = new IElementType("FL_DEFINITION", FLLanguage.INSTANCE);
     public static final IElementType HEADER = new IElementType("FL_HEADER", FLLanguage.INSTANCE);
     public static final IElementType PARAM = new IElementType("FL_PARAM", FLLanguage.INSTANCE);
-    public static final IElementType METADATA = new IElementType("FL_METADATA", FLLanguage.INSTANCE);
+    public static final IElementType METADATA_BLOCK = new IElementType("FL_METADATA_BLOCK", FLLanguage.INSTANCE);
+    public static final IElementType METADATA_CLAUSE = new IElementType("FL_METADATA_CLAUSE", FLLanguage.INSTANCE);
+    public static final IElementType METADATA = METADATA_BLOCK;
     public static final IElementType KEYWORD = new IElementType("FL_KEYWORD", FLLanguage.INSTANCE);
     public static final IElementType BOOLEAN = new IElementType("FL_BOOLEAN", FLLanguage.INSTANCE);
     public static final IElementType IDENTIFIER = new IElementType("FL_IDENTIFIER", FLLanguage.INSTANCE);
