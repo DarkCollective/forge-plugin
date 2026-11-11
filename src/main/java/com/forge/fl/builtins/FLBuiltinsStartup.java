@@ -1,5 +1,7 @@
 package com.forge.fl.builtins;
 
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ex.ProjectRootManagerEx;
 import com.intellij.openapi.startup.StartupActivity;
@@ -16,7 +18,12 @@ public class FLBuiltinsStartup implements StartupActivity.Background {
     public void runActivity(@NotNull Project project) {
         FLBuiltins.prepare();
         if (FLBuiltins.consumeMissedRoot()) {
-            ProjectRootManagerEx.getInstanceEx(project).makeRootsChange(EmptyRunnable.INSTANCE, false, true);
+            // A roots change needs a write action on the EDT; this activity runs on a background thread.
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (project.isDisposed()) return;
+                WriteAction.run(() -> ProjectRootManagerEx.getInstanceEx(project)
+                        .makeRootsChange(EmptyRunnable.INSTANCE, false, true));
+            });
         }
     }
 }
