@@ -64,11 +64,20 @@ the stack effect, under a `\` comment with its documentation and a `[TypeScript 
 `U<bareName>` and the vocabularies the file switches to or declares into, `V<vocab>`. It is computed from the token
 stream alone (`FLLightScan`); bump `FLIndex.VERSION` when the format or the scanning rules change.
 
+## Requirements
+
+- Any JDK 17 or newer to run Gradle (a `JAVA_HOME` is not needed; the build sets none). Compiling and testing use a Java 17
+  toolchain, which Gradle downloads on first use (foojay resolver) if it is not installed.
+- The Gradle wrapper (9.9.1); the IntelliJ Platform Gradle Plugin 2.x needs Gradle 9 or newer.
+- Compiled against IntelliJ IDEA Community 2024.1.1. The plugin declares compatibility with builds 241 to 263.*
+  (2024.1 to 2026.3); `verifyPlugin` checks both ends. Raise the upper bound in `build.gradle.kts` only after
+  verifying the next release.
+
 ## Tests
 
 `./gradlew test`. With `-Dfl.corpus=...` it also prints `FL-DIAG files=.. errors=.. warnings=.. weak=..` (fails on errors or warnings). To parse a directory of real sources and check that every word reference in it resolves:
 `./gradlew test -Dfl.corpus=/path/to/forge/packages/ops/vocab` (prints `FL-RESOLVE files=.. refs=.. unresolved=..
-ambiguous=..`; the run fails when either count is not zero).
+ambiguous=..`; the run fails when either count is not zero). Without the property the corpus test does not run.
 
 ## Run locally
 
@@ -76,8 +85,19 @@ ambiguous=..`; the run fails when either count is not zero).
 ./gradlew runIde
 ```
 
-## Build
+## Build and verify
 
 ```bash
-./gradlew build
+./gradlew clean test buildPlugin   # plugin zip in build/distributions
+./gradlew verifyPlugin             # Plugin Verifier against IC 2024.1.1 and IU 2026.3 (downloads the IDEs, ~1 GB, outside the repo)
 ```
+
+## CI
+
+`.github/workflows/build.yml` runs on every push and pull request: `build`, `buildPlugin` and `verifyPlugin`, with the
+plugin zip, test reports and verifier reports uploaded as artifacts. It does not sign or publish anything.
+
+## Licence
+
+Apache License 2.0, see `LICENSE.txt` and `NOTICE` (both are also packaged in the plugin jar under `META-INF`).
+See `CHANGELOG.md` for changes.

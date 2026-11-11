@@ -12,7 +12,11 @@ import com.forge.fl.psi.FLVariable;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.projectView.PresentationData;
 import com.intellij.ide.structureView.StructureViewTreeElement;
-import com.intellij.ide.structureView.impl.common.PsiTreeElementBase;
+import com.intellij.ide.util.treeView.smartTree.SortableTreeElement;
+import com.intellij.ide.util.treeView.smartTree.TreeElement;
+import com.intellij.pom.Navigatable;
+import com.intellij.psi.SmartPointerManager;
+import com.intellij.psi.SmartPsiElementPointer;
 import com.intellij.navigation.ItemPresentation;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -32,7 +36,9 @@ import java.util.Map;
  * one {@code IN:} the words are grouped by vocabulary. Private words (a leading {@code _}) are marked with a
  * private overlay icon and a tooltip.
  */
-public class FLStructureViewElement extends PsiTreeElementBase<PsiElement> {
+public class FLStructureViewElement implements StructureViewTreeElement, SortableTreeElement {
+    private final SmartPsiElementPointer<PsiElement> pointer;
+
     /** For a vocabulary group: the vocabulary name. */
     private final String group;
 
@@ -41,8 +47,48 @@ public class FLStructureViewElement extends PsiTreeElementBase<PsiElement> {
     }
 
     private FLStructureViewElement(PsiElement element, String group) {
-        super(element);
+        this.pointer = SmartPointerManager.createPointer(element);
         this.group = group;
+    }
+
+    @Nullable
+    public PsiElement getElement() {
+        return pointer.getElement();
+    }
+
+    @Override
+    public PsiElement getValue() {
+        return getElement();
+    }
+
+    @NotNull
+    @Override
+    public TreeElement[] getChildren() {
+        PsiElement element = getElement();
+        if (element == null) return TreeElement.EMPTY_ARRAY;
+        return getChildrenBase().toArray(TreeElement.EMPTY_ARRAY);
+    }
+
+    @NotNull
+    @Override
+    public String getAlphaSortKey() {
+        String text = getPresentableText();
+        return text == null ? "" : text;
+    }
+
+    @Override
+    public void navigate(boolean requestFocus) {
+        if (getElement() instanceof Navigatable n) n.navigate(requestFocus);
+    }
+
+    @Override
+    public boolean canNavigate() {
+        return getElement() instanceof Navigatable n && n.canNavigate();
+    }
+
+    @Override
+    public boolean canNavigateToSource() {
+        return getElement() instanceof Navigatable n && n.canNavigateToSource();
     }
 
     public boolean isGroup() {
@@ -58,7 +104,6 @@ public class FLStructureViewElement extends PsiTreeElementBase<PsiElement> {
     }
 
     @NotNull
-    @Override
     public Collection<StructureViewTreeElement> getChildrenBase() {
         List<StructureViewTreeElement> result = new ArrayList<>();
         PsiElement element = getElement();
@@ -96,7 +141,6 @@ public class FLStructureViewElement extends PsiTreeElementBase<PsiElement> {
     }
 
     @Nullable
-    @Override
     public String getPresentableText() {
         if (group != null) return group;
         PsiElement element = getElement();
@@ -105,14 +149,12 @@ public class FLStructureViewElement extends PsiTreeElementBase<PsiElement> {
     }
 
     @Nullable
-    @Override
     public String getLocationString() {
         PsiElement element = getElement();
         return group == null && element instanceof FLNamedElement named ? named.getLocationText() : null;
     }
 
     @Nullable
-    @Override
     public Icon getIcon(boolean open) {
         PsiElement element = getElement();
         if (element == null) return null;

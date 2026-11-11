@@ -2,7 +2,7 @@
     <id>com.forge.fl</id>
     <name>Forge FL</name>
     <version>0.1.0</version>
-    <vendor email="hello@forge.dev" url="https://github.com/DarkCollective/forge">DarkCollective</vendor>
+    <vendor email="david.tooke@gmail.com" url="https://github.com/DarkCollective/forge">DarkCollective</vendor>
 
     <description><![CDATA[
         Language support for the FL language used by the Forge project: highlighting, name resolution across files and into the built-in words, find usages, rename and completion.
@@ -10,7 +10,6 @@
 
     <depends>com.intellij.modules.lang</depends>
 
-    <idea-version since-build="241.0" until-build="999.*"/>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="FL / FTH"

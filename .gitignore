@@ -10,3 +10,9 @@ out/
 
 # OS files
 .DS_Store
+
+# IntelliJ Platform Gradle Plugin
+.intellijPlatform/
+
+# Gradle / Kotlin
+.kotlin/

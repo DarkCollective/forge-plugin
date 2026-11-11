@@ -1,0 +1,9 @@
+Forge FL IntelliJ Plugin
+Copyright 2026 Darkcollective, LLC
+
+This product includes software developed at Darkcollective, LLC
+(https://github.com/DarkCollective/forge-plugin).
+
+The files in src/test/testData/corpus/*.fth and src/main/resources/builtins/builtins.json come from, or are
+generated from, Forge (https://github.com/DarkCollective/forge), Copyright 2026 Darkcollective, LLC, licensed
+under the Apache License, Version 2.0.

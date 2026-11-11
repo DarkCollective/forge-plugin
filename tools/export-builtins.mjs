@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Copyright 2026 Darkcollective, LLC. Licensed under the Apache License, Version 2.0.
 /*
  * Exports the words of a Forge checkout that are NOT defined by a .fth source (core words, intrinsics and the
  * TypeScript primitives the ops package binds into vocabularies) to src/main/resources/builtins/builtins.json.
