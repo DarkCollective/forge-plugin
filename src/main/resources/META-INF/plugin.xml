@@ -23,6 +23,7 @@
         <lang.syntaxHighlighterFactory language="FL" implementationClass="com.forge.fl.highlighting.FLSyntaxHighlighterFactory"/>
         <lang.braceMatcher language="FL" implementationClass="com.forge.fl.editor.FLBraceMatcher"/>
         <lang.commenter language="FL" implementationClass="com.forge.fl.editor.FLCommenter"/>
+        <lang.psiStructureViewFactory language="FL" implementationClass="com.forge.fl.editor.FLStructureViewFactory"/>
         <colorSettingsPage implementation="com.forge.fl.editor.FLColorSettingsPage"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
     </extensions>
