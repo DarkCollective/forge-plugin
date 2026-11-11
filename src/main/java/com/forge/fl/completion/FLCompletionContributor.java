@@ -2,6 +2,7 @@ package com.forge.fl.completion;
 
 import com.forge.fl.FLLanguage;
 import com.forge.fl.FLTokenTypes;
+import com.forge.fl.doc.FLLookupObject;
 import com.forge.fl.index.FLIndexLookup;
 import com.forge.fl.psi.FLDefinition;
 import com.forge.fl.psi.FLInForm;
@@ -106,7 +107,7 @@ public class FLCompletionContributor extends CompletionContributor {
             for (FLParameter p : def.getParameters()) {
                 String n = p.getName();
                 if (n != null) {
-                    items.putIfAbsent(n, LookupElementBuilder.create(n).withIcon(p.getIcon(0)).withTypeText("parameter"));
+                    items.putIfAbsent(n, LookupElementBuilder.create(p, n).withIcon(p.getIcon(0)).withTypeText("parameter"));
                 }
             }
         }
@@ -142,22 +143,23 @@ public class FLCompletionContributor extends CompletionContributor {
             FLNamedElement e = d.element();
             String effect = e instanceof FLVariable && d.name().endsWith("!") && !d.name().equals(e.getName())
                     ? setterEffect(e) : e.getEffectText();
-            items.putIfAbsent(d.name(), item(d.name(), vocab, effect).withIcon(e.getIcon(0)));
+            items.putIfAbsent(d.name(), item(e, d.name(), vocab, effect).withIcon(e.getIcon(0)));
         }
         for (FLIndexLookup.Decl d : FLIndexLookup.wordsOf(file.getProject(), vocab, self).values()) {
             if (!includePrivate && FLResolver.isPrivateName(d.name())) continue;
-            items.putIfAbsent(d.name(), item(d.name(), vocab, d.entry().detail())
-                    .withIcon(com.forge.fl.FLIcons.FILE));
+            items.putIfAbsent(d.name(), item(new FLLookupObject(vocab, d.name(), d.file(), d.entry()), d.name(), vocab,
+                    d.entry().detail()).withIcon(com.forge.fl.FLIcons.FILE));
         }
     }
 
     private static String setterEffect(FLNamedElement variable) {
         String eff = variable.getEffectText(); // ( -- T )
-        return eff == null ? null : "( " + eff.substring(4, eff.length() - 2) + " -- )";
+        return eff == null ? null : "( " + eff.substring(5, eff.length() - 2) + " -- )";
     }
 
-    private static LookupElementBuilder item(String name, String vocab, @Nullable String effect) {
-        LookupElementBuilder b = LookupElementBuilder.create(name).withTypeText(vocab, true);
+    /** The lookup object is the declaration (or, for index hits, where it is), so that Quick Documentation works in the popup. */
+    private static LookupElementBuilder item(Object object, String name, String vocab, @Nullable String effect) {
+        LookupElementBuilder b = LookupElementBuilder.create(object, name).withTypeText(vocab, true);
         if (effect != null) b = b.withTailText(" " + effect, true);
         return b;
     }

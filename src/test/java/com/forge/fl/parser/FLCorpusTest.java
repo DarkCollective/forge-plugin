@@ -98,4 +98,62 @@ public class FLCorpusTest extends FLTestBase {
         assertEquals("unresolved references", 0, unresolved);
         assertEquals("ambiguous references", 0, ambiguous);
     }
+
+    /**
+     * Runs the diagnostics over every file of the directory, all loaded into one project. These sources compile
+     * with the real toolchain, so every error or warning is a plugin bug. Weak warnings (W_SHADOW and the like) are
+     * counted and sampled but do not fail the run.
+     */
+    public void testExternalCorpusDiagnostics() throws IOException {
+        String dir = System.getProperty("fl.corpus");
+        if (dir == null || dir.isBlank()) return;
+        List<Path> files = filesIn(Path.of(dir));
+        List<PsiFile> psi = new ArrayList<>();
+        for (Path p : files) {
+            psi.add(myFixture.addFileToProject(p.getFileName().toString(), Files.readString(p)));
+        }
+        int errors = 0;
+        int warnings = 0;
+        int weak = 0;
+        List<String> samples = new ArrayList<>();
+        List<String> weakSamples = new ArrayList<>();
+        java.util.Map<String, Integer> byCode = new java.util.TreeMap<>();
+        for (PsiFile f : psi) {
+            String text = f.getText();
+            for (com.forge.fl.diagnostics.FLDiagnostics.Problem p : com.forge.fl.diagnostics.FLDiagnostics.compute(f)) {
+                int line = com.intellij.openapi.util.text.StringUtil.offsetToLineNumber(text, p.range().getStartOffset()) + 1;
+                String where = f.getName() + ":" + line + " " + p.severity() + " " + p.message();
+                byCode.merge(p.severity() + " " + p.code(), 1, Integer::sum);
+                switch (p.severity()) {
+                    case ERROR -> {
+                        errors++;
+                        samples.add(where);
+                    }
+                    case WARNING -> {
+                        warnings++;
+                        samples.add(where);
+                    }
+                    default -> {
+                        weak++;
+                        weakSamples.add(where);
+                    }
+                }
+            }
+        }
+        System.out.println("FL-DIAG files=" + files.size() + " errors=" + errors + " warnings=" + warnings
+                + " weak=" + weak);
+        byCode.forEach((k, v) -> System.out.println("FL-DIAG COUNT " + k + " " + v));
+        int shown = 0;
+        for (String s : samples) {
+            if (shown++ == 50) break;
+            System.out.println("FL-DIAG SAMPLE " + s);
+        }
+        shown = 0;
+        for (String s : weakSamples) {
+            if (shown++ == 8) break;
+            System.out.println("FL-DIAG WEAK SAMPLE " + s);
+        }
+        assertEquals("errors", 0, errors);
+        assertEquals("warnings", 0, warnings);
+    }
 }

@@ -9,7 +9,7 @@ This is a starter IntelliJ plugin for the FL language described in `docs/LANGUAG
 - name resolution as in `docs/LANGUAGE.md` section 6, across files and into the built-in words: parameter, current
   vocabulary (`IN:`), imports (`USING:`, an ambiguous name is a poly-variant reference with the candidates in
   `USING:` order), then `core`; qualified `vocab:name` (a private `_name` only from its own vocabulary); `META:`
-  targets and `alias`/`see-also` clauses per 5.9. An unresolved name stays a soft reference (no diagnostics yet)
+  targets and `alias`/`see-also` clauses per 5.9. An unresolved name stays a soft reference; the diagnostics below report it
 - Ctrl-click, find usages and rename (Shift+F6) for words, constants, variables (`n` and `n!`), aliases, header
   parameters, `META:` targets and `param` clauses, across all files of the project; symbol names such as `+!` and
   `>hex` work. Only uses that resolve to the declaration change: a same-named word of another vocabulary, a
@@ -17,6 +17,22 @@ This is a starter IntelliJ plugin for the FL language described in `docs/LANGUAG
 - built-in words (core words, intrinsics and the TypeScript primitives bound into vocabularies) are real
   navigation targets: Ctrl-click on `dup` opens a read-only `core.fl` with the stack effect and documentation.
   They cannot be renamed
+- diagnostics naming the spec error code (`FLDiagnostics`): E_UNDEFINED (also use before definition and a word inside
+  its own body), E_NO_VOCAB (qualified names and `USING:`), E_AMBIGUOUS (with a quick fix per candidate that writes
+  `vocab:name`), E_PRIVATE, E_REDEFINED (words, constants, variables and `n!`, aliases), E_NAME, E_HEADER (no header,
+  no `--`, duplicate, reserved or malformed parameter name), E_META (undefined or later target, private target,
+  unknown clause, `param` that is not a parameter other than the first input). Errors are an annotator; the weak
+  warnings E_TOPLEVEL / `VOCAB` in a file and W_SHADOW are two inspections that can be switched off. Not checked:
+  types, constraints and defaults of headers, stack effects, repeated `doc`/`category`/`version`, string lengths,
+  alias collisions with words of other files, `IN: core`, `PRIMITIVE` registry checks
+- quick documentation (qualified name, kind, effect, doc, category, version, parameters with META help, aliases,
+  see-also, constant/variable value; built-ins from their comment lines), also in the completion popup
+- Go to Symbol (index-backed; names are `vocab:name`, so `encrypt` and `aes:enc` both match; built-ins with
+  "include non-project items"), structure view grouped by vocabulary when a file has several `IN:`, with a sorter and
+  a "show private words" filter, breadcrumbs
+- folding (definitions, META: blocks, multi-line quotations and lists, runs of 3+ comment lines, licence header),
+  typed pairing (`[  ]`, `{  }` with spaces inside, `""`), semantic colours (META clause words, declaration names,
+  parameter uses, built-in uses, vocabulary names) on the colour page, TODO in comments
 - structure view, brace matching, `\ ` line comments
 - completion of what is visible at the caret (parameters, current vocabulary, imported vocabularies, `core`) with the
   stack effect as tail text and the vocabulary as type text; `vocab:` offers that vocabulary's words; `USING:` and
@@ -50,7 +66,7 @@ stream alone (`FLLightScan`); bump `FLIndex.VERSION` when the format or the scan
 
 ## Tests
 
-`./gradlew test`. To parse a directory of real sources and check that every word reference in it resolves:
+`./gradlew test`. With `-Dfl.corpus=...` it also prints `FL-DIAG files=.. errors=.. warnings=.. weak=..` (fails on errors or warnings). To parse a directory of real sources and check that every word reference in it resolves:
 `./gradlew test -Dfl.corpus=/path/to/forge/packages/ops/vocab` (prints `FL-RESOLVE files=.. refs=.. unresolved=..
 ambiguous=..`; the run fails when either count is not zero).
 

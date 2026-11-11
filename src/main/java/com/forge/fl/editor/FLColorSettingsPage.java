@@ -34,6 +34,11 @@ public class FLColorSettingsPage implements ColorSettingsPage {
             new AttributesDescriptor("Header//Type name", FLSyntaxHighlighter.HEADER_TYPE),
             new AttributesDescriptor("Header//Arrow", FLSyntaxHighlighter.HEADER_ARROW),
             new AttributesDescriptor("Header//Output", FLSyntaxHighlighter.HEADER_OUTPUT),
+            new AttributesDescriptor("Semantic//Declaration keyword (doc, category, META: clauses)", FLSyntaxHighlighter.META_KEYWORD),
+            new AttributesDescriptor("Semantic//Declared name", FLSyntaxHighlighter.DECLARATION_NAME),
+            new AttributesDescriptor("Semantic//Parameter use", FLSyntaxHighlighter.PARAMETER_USE),
+            new AttributesDescriptor("Semantic//Built-in word use", FLSyntaxHighlighter.BUILTIN_WORD),
+            new AttributesDescriptor("Semantic//Vocabulary name", FLSyntaxHighlighter.VOCABULARY),
             new AttributesDescriptor("Bad character", FLSyntaxHighlighter.BAD_CHARACTER),
     };
 
@@ -69,26 +74,32 @@ public class FLColorSettingsPage implements ColorSettingsPage {
     @Override
     public String getDemoText() {
         return "\\ A line comment\n"
-                + "IN: demo\n"
-                + "USING: util ;\n"
-                + "256 CONSTANT block-size\n"
-                + "0 VARIABLE counter\n"
+                + "IN: <voc>demo</voc>\n"
+                + "USING: <voc>util</voc> ;\n"
+                + "256 CONSTANT <decl>block-size</decl>\n"
+                + "0 VARIABLE <decl>counter</decl>\n"
                 + "\n"
-                + ": derive ( password:str salt:key{utf8|hex}[8..64]=\"somesalt\" -- bytes )\n"
-                + "  \"The hash of the password.\" doc\n"
-                + "  \"Key derivation\" category\n"
-                + "  ( a block comment ) password salt util:_derive\n"
-                + "  [ 1 2 + ] drop { 'a' #[ de ad ] true 0x1F 1.5e3 } drop counter! ;\n"
+                + ": <decl>derive</decl> ( password:str salt:key{utf8|hex}[8..64]=\"somesalt\" -- bytes )\n"
+                + "  \"The hash of the password.\" <mk>doc</mk>\n"
+                + "  \"Key derivation\" <mk>category</mk>\n"
+                + "  ( a block comment ) <par>password</par> <par>salt</par> <voc>util</voc>:_derive\n"
+                + "  [ 1 2 <bi>+</bi> ] <bi>drop</bi> { 'a' #[ de ad ] true 0x1F 1.5e3 } <bi>drop</bi> counter! ;\n"
                 + "\n"
                 + "META: derive\n"
-                + "  param salt \"The salt, at least 8 bytes.\" ;\n"
-                + "  see-also util:compare ;\n"
+                + "  <mk>param</mk> salt \"The salt, at least 8 bytes.\" ;\n"
+                + "  <mk>see-also</mk> <voc>util</voc>:compare ;\n"
                 + ";\n";
     }
 
     @Nullable
     @Override
     public Map<String, TextAttributesKey> getAdditionalHighlightingTagToDescriptorMap() {
-        return null;
+        Map<String, TextAttributesKey> m = new java.util.HashMap<>();
+        m.put("decl", FLSyntaxHighlighter.DECLARATION_NAME);
+        m.put("par", FLSyntaxHighlighter.PARAMETER_USE);
+        m.put("bi", FLSyntaxHighlighter.BUILTIN_WORD);
+        m.put("voc", FLSyntaxHighlighter.VOCABULARY);
+        m.put("mk", FLSyntaxHighlighter.META_KEYWORD);
+        return m;
     }
 }

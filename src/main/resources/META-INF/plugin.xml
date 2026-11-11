@@ -35,6 +35,21 @@
         <referencesSearch implementation="com.forge.fl.search.FLReferencesSearcher"/>
         <vetoRenameCondition implementation="com.forge.fl.psi.FLRenameVeto"/>
         <postStartupActivity implementation="com.forge.fl.builtins.FLBuiltinsStartup"/>
+        <annotator language="FL" implementationClass="com.forge.fl.diagnostics.FLAnnotator"/>
+        <localInspection language="FL" shortName="FLTopLevelCode" displayName="Executable code outside a definition"
+                         groupName="FL" enabledByDefault="true" level="WEAK WARNING"
+                         implementationClass="com.forge.fl.diagnostics.FLTopLevelCodeInspection"/>
+        <localInspection language="FL" shortName="FLShadow" displayName="Parameter hides a word"
+                         groupName="FL" enabledByDefault="true" level="WEAK WARNING"
+                         implementationClass="com.forge.fl.diagnostics.FLShadowInspection"/>
+        <annotator language="FL" implementationClass="com.forge.fl.highlighting.FLSemanticAnnotator"/>
+        <lang.documentationProvider language="FL" implementationClass="com.forge.fl.doc.FLDocumentationProvider"/>
+        <gotoSymbolContributor implementation="com.forge.fl.navigation.FLGotoSymbolContributor"/>
+        <lang.foldingBuilder language="FL" implementationClass="com.forge.fl.editor.FLFoldingBuilder"/>
+        <typedHandler implementation="com.forge.fl.editor.FLTypedHandler"/>
+        <quoteHandler fileType="FL / FTH" className="com.forge.fl.editor.FLQuoteHandler"/>
+        <breadcrumbsInfoProvider implementation="com.forge.fl.editor.FLBreadcrumbsProvider"/>
+        <indexPatternBuilder implementation="com.forge.fl.editor.FLIndexPatternBuilder"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
     </extensions>
 </idea-plugin>

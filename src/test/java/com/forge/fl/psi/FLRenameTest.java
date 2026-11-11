@@ -69,7 +69,9 @@ public class FLRenameTest extends FLTestBase {
         assertNotNull(ref);
         assertTrue(ref.isSoft());
         assertNull(ref.resolve());
-        myFixture.checkHighlighting(); // no error highlighting
+        // phase 3: the references stay soft, but the annotator now reports them
+        assertEquals(java.util.List.of("Undefined word 'nosuchword' (E_UNDEFINED)", "Unknown vocabulary 'other' (E_NO_VOCAB)"),
+                errorDescriptions());
     }
 
     public void testVariableBangResolvesToVariable() {
@@ -208,5 +210,13 @@ public class FLRenameTest extends FLTestBase {
         for (String bad : new String[]{"Foo", "_x", "1x", "str", "int", "bytes", "recurse", ">hex", "a:b", "true"}) {
             assertFalse(bad, FLParameterRenameValidator.isValidParameterName(bad));
         }
+    }
+
+    private java.util.List<String> errorDescriptions() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (com.intellij.codeInsight.daemon.impl.HighlightInfo i : myFixture.doHighlighting()) {
+            if (i.getSeverity() == com.intellij.lang.annotation.HighlightSeverity.ERROR) out.add(i.getDescription());
+        }
+        return out;
     }
 }

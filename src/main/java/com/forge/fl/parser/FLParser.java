@@ -33,7 +33,7 @@ public class FLParser implements PsiParser {
             int before = builder.getCurrentOffset();
             topLevel();
             if (builder.getCurrentOffset() == before && !builder.eof()) {
-                errorAndAdvance("unexpected token"); // safety net
+                errorAndAdvance("unexpected token (E_SYNTAX)"); // safety net
             }
         }
         file.done(root);
@@ -48,6 +48,11 @@ public class FLParser implements PsiParser {
         PsiBuilder.Marker m = b.mark();
         b.advanceLexer();
         m.error(message);
+    }
+
+    /** A missing name operand: E_SYNTAX at the end of the input, E_NAME for any other token (docs/LANGUAGE.md 11.0). */
+    private void nameMissing(String message) {
+        b.error(message + (b.eof() ? " (E_SYNTAX)" : " (E_NAME)"));
     }
 
     private static boolean isLiteral(IElementType t) {
@@ -73,9 +78,9 @@ public class FLParser implements PsiParser {
         } else if (isLiteral(t) && (b.lookAhead(1) == CONSTANT_KW || b.lookAhead(1) == VARIABLE_KW)) {
             constOrVar();
         } else if (t == SEMI) {
-            errorAndAdvance("unexpected ';'");
+            errorAndAdvance("unexpected ';' (E_SYNTAX)");
         } else if (t == CONSTANT_KW || t == VARIABLE_KW) {
-            errorAndAdvance("a literal must come before " + (t == CONSTANT_KW ? "CONSTANT" : "VARIABLE"));
+            errorAndAdvance("a literal must come before " + (t == CONSTANT_KW ? "CONSTANT" : "VARIABLE") + " (E_SYNTAX)");
         } else {
             item(true); // stray code: the console allows it, so no error
         }
@@ -86,7 +91,7 @@ public class FLParser implements PsiParser {
         PsiBuilder.Marker m = b.mark();
         b.advanceLexer();
         if (tt() == WORD_NAME) b.advanceLexer();
-        else b.error(missing);
+        else nameMissing(missing);
         m.done(type);
     }
 
@@ -96,10 +101,10 @@ public class FLParser implements PsiParser {
         while (!b.eof() && tt() != SEMI) {
             if (tt() == WORD_NAME) b.advanceLexer();
             else if (FORM_STARTS.contains(tt())) break;
-            else errorAndAdvance("vocabulary name expected");
+            else errorAndAdvance("vocabulary name expected (E_NAME)");
         }
         if (tt() == SEMI) b.advanceLexer();
-        else b.error("';' expected");
+        else b.error("';' expected (E_SYNTAX)");
         m.done(FLElementTypes.USING_FORM);
     }
 
@@ -109,7 +114,7 @@ public class FLParser implements PsiParser {
         boolean constant = tt() == CONSTANT_KW;
         b.advanceLexer();
         if (tt() == WORD_NAME) b.advanceLexer();
-        else b.error("word name expected");
+        else nameMissing("word name expected");
         m.done(constant ? FLElementTypes.CONSTANT_DECL : FLElementTypes.VARIABLE_DECL);
     }
 
@@ -121,12 +126,12 @@ public class FLParser implements PsiParser {
         if (tt() == WORD_NAME) {
             b.advanceLexer();
         } else if (tt() == QUALIFIED_NAME || (tt() != null && KEYWORDS.contains(tt()) && tt() != COLON && tt() != SEMI)) {
-            errorAndAdvance("a definition name must be an unreserved, unqualified word");
+            errorAndAdvance("a definition name must be an unreserved, unqualified word (E_NAME)");
         } else {
-            b.error("word name expected");
+            nameMissing("word name expected");
         }
         if (tt() == HDR_LPAREN) header();
-        else b.error("stack-effect header expected");
+        else b.error("stack-effect header expected (E_HEADER)");
         while (tt() == STRING && b.lookAhead(1) == WORD_NAME && isDocWord()) {
             PsiBuilder.Marker d = b.mark();
             b.advanceLexer();
@@ -137,7 +142,7 @@ public class FLParser implements PsiParser {
         if (tt() == SEMI) {
             b.advanceLexer();
         } else {
-            b.error("';' expected");
+            b.error("';' expected (E_SYNTAX)");
         }
         m.done(FLElementTypes.DEFINITION);
     }
@@ -169,7 +174,7 @@ public class FLParser implements PsiParser {
             }
         }
         if (tt() == HDR_RPAREN) b.advanceLexer();
-        else b.error("')' expected");
+        else b.error("')' expected (E_LEX)");
         m.done(FLElementTypes.HEADER);
     }
 
@@ -199,19 +204,19 @@ public class FLParser implements PsiParser {
             wordRef();
         } else if (t == RBRACKET || t == RBRACE) {
             if (!topLevel && depth > 0) return false;
-            errorAndAdvance("unbalanced '" + (t == RBRACKET ? "]" : "}") + "'");
+            errorAndAdvance("unbalanced '" + (t == RBRACKET ? "]" : "}") + "' (E_SYNTAX)");
         } else if (isLiteral(t) || t == RECURSE_KW) {
             b.advanceLexer();
         } else if (t == TokenType.BAD_CHARACTER) {
-            errorAndAdvance("malformed token");
+            errorAndAdvance("malformed token (E_LEX)");
         } else if (t == SEMI && topLevel) {
-            errorAndAdvance("unexpected ';'");
+            errorAndAdvance("unexpected ';' (E_SYNTAX)");
         } else if (t == CONSTANT_KW || t == VARIABLE_KW) {
-            errorAndAdvance("a literal must come before " + (t == CONSTANT_KW ? "CONSTANT" : "VARIABLE"));
+            errorAndAdvance("a literal must come before " + (t == CONSTANT_KW ? "CONSTANT" : "VARIABLE") + " (E_SYNTAX)");
         } else if (t == SEMI || FORM_STARTS.contains(t)) {
             return false;
         } else {
-            errorAndAdvance("unexpected token");
+            errorAndAdvance("unexpected token (E_SYNTAX)");
         }
         return true;
     }
@@ -234,7 +239,7 @@ public class FLParser implements PsiParser {
             depth--;
         }
         if (tt() == close) b.advanceLexer();
-        else b.error(missing);
+        else b.error(missing + " (E_SYNTAX)");
         m.done(type);
     }
 
@@ -250,7 +255,7 @@ public class FLParser implements PsiParser {
         PsiBuilder.Marker m = b.mark();
         b.advanceLexer(); // META:
         if (tt() == WORD_NAME) wordRef();
-        else b.error("word name expected");
+        else b.error("word name expected (E_SYNTAX)");
         while (!b.eof()) {
             IElementType t = tt();
             if (t == SEMI) {
@@ -265,12 +270,12 @@ public class FLParser implements PsiParser {
                 PsiBuilder.Marker c = b.mark();
                 b.advanceLexer();
                 skipToClauseEnd();
-                c.error("unknown META: clause");
+                c.error("unknown META: clause (E_META)");
             } else {
-                errorAndAdvance("unexpected token in META: block");
+                errorAndAdvance("unexpected token in META: block (E_META)");
             }
         }
-        b.error("';' expected");
+        b.error("';' expected (E_SYNTAX)");
         m.done(FLElementTypes.META_BLOCK);
     }
 
@@ -290,7 +295,7 @@ public class FLParser implements PsiParser {
             switch (key == null ? "" : key) {
                 case "doc", "category", "version" -> {
                     if (t == STRING) b.advanceLexer();
-                    else errorAndAdvance("string expected");
+                    else errorAndAdvance("string expected (E_META)");
                 }
                 case "param" -> {
                     if (paramName && t == WORD_NAME) {
@@ -301,7 +306,7 @@ public class FLParser implements PsiParser {
                     } else if (!paramName && t == STRING) {
                         b.advanceLexer();
                     } else {
-                        errorAndAdvance(paramName ? "parameter name expected" : "string expected");
+                        errorAndAdvance(paramName ? "parameter name expected (E_META)" : "string expected (E_META)");
                     }
                 }
                 case "alias" -> {
@@ -310,19 +315,19 @@ public class FLParser implements PsiParser {
                         b.advanceLexer();
                         a.done(FLElementTypes.ALIAS);
                     } else {
-                        errorAndAdvance("alias name expected");
+                        errorAndAdvance("alias name expected (E_NAME)");
                     }
                 }
                 default -> { // see-also
                     if (t == WORD_NAME || t == QUALIFIED_NAME) wordRef();
-                    else errorAndAdvance("word name expected");
+                    else errorAndAdvance("word name expected (E_META)");
                 }
             }
             args++;
         }
-        if (args == 0) b.error("argument expected");
+        if (args == 0) b.error("argument expected (E_META)");
         if (tt() == SEMI) b.advanceLexer();
-        else b.error("';' expected");
+        else b.error("';' expected (E_SYNTAX)");
         c.done(FLElementTypes.META_CLAUSE);
     }
 }

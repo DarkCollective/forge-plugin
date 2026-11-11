@@ -22,7 +22,7 @@ public class FLBraceMatcher implements PairedBraceMatcher {
 
     @Override
     public boolean isPairedBracesAllowedBeforeType(@NotNull IElementType lbraceType, @Nullable IElementType contextType) {
-        return true;
+        return false; // FLTypedHandler pairs brackets itself, with the spaces FL needs
     }
 
     @Override

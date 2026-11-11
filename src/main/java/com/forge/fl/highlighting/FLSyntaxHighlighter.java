@@ -56,6 +56,18 @@ public class FLSyntaxHighlighter extends SyntaxHighlighterBase {
     public static final TextAttributesKey BAD_CHARACTER =
             createTextAttributesKey("FL_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER);
 
+    // Semantic keys, applied by FLSemanticAnnotator (the lexer cannot know what a word is).
+    public static final TextAttributesKey META_KEYWORD =
+            createTextAttributesKey("FL_META_KEYWORD", DefaultLanguageHighlighterColors.KEYWORD);
+    public static final TextAttributesKey DECLARATION_NAME =
+            createTextAttributesKey("FL_DECLARATION_NAME", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION);
+    public static final TextAttributesKey PARAMETER_USE =
+            createTextAttributesKey("FL_PARAMETER_USE", DefaultLanguageHighlighterColors.PARAMETER);
+    public static final TextAttributesKey BUILTIN_WORD =
+            createTextAttributesKey("FL_BUILTIN_WORD", DefaultLanguageHighlighterColors.PREDEFINED_SYMBOL);
+    public static final TextAttributesKey VOCABULARY =
+            createTextAttributesKey("FL_VOCABULARY", DefaultLanguageHighlighterColors.CLASS_NAME);
+
     private static final Map<IElementType, TextAttributesKey> ATTRS = new HashMap<>();
 
     static {

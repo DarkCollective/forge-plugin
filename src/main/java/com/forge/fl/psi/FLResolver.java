@@ -54,6 +54,31 @@ public final class FLResolver {
             formStart = top.getTextRange().getStartOffset();
             self = file.getOriginalFile().getVirtualFile();
         }
+
+        Context(PsiFile file, int formStart) {
+            project = file.getProject();
+            scope = FLScope.of(file);
+            this.formStart = formStart;
+            self = file.getOriginalFile().getVirtualFile();
+        }
+    }
+
+    /**
+     * Whether an unqualified {@code name} used at {@code formStart} (the start of a top-level form of {@code file})
+     * would find a word by steps 2 to 4 of docs/LANGUAGE.md 6.2: the current vocabulary, the imports (public names)
+     * or {@code core}. Locals are not considered. An ambiguous name counts as visible. This is the test behind
+     * W_SHADOW (section 7).
+     */
+    public static boolean isVisible(@NotNull PsiFile file, @NotNull String name, int formStart) {
+        Context c = new Context(file, formStart);
+        String current = c.scope.vocabAt(formStart);
+        if (definedIn(c, current, name, false) != null) return true;
+        if (!isPrivateName(name)) {
+            for (String u : c.scope.usingAt(formStart)) {
+                if (!u.equals(current) && definedIn(c, u, name, false) != null) return true;
+            }
+        }
+        return definedIn(c, "core", name, false) != null;
     }
 
     public static boolean isPrivateName(String name) {

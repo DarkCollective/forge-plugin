@@ -134,7 +134,8 @@ public class FLResolveTest extends FLMultiFileTestBase {
         assertTrue(ref.isSoft());
         assertNull(ref.resolve());
         assertEquals(0, ((PsiPolyVariantReference) ref).multiResolve(false).length);
-        myFixture.checkHighlighting(); // no error highlighting
+        // phase 3: the reference stays soft, but the annotator now reports the name
+        assertEquals(java.util.List.of("Undefined word 'nosuchword' (E_UNDEFINED)"), errorDescriptions());
     }
 
     public void testForwardReferenceDoesNotHideCoreOrImports() {
@@ -265,5 +266,13 @@ public class FLResolveTest extends FLMultiFileTestBase {
         for (FLWordRef r : com.intellij.psi.util.PsiTreeUtil.findChildrenOfType(edited, FLWordRef.class)) assertNotNull(r.getReference().resolve());
         int secondPass = FLIndexLookup.QUERIES.get() - before;
         assertTrue("index queries after an edit: " + secondPass, secondPass <= 8);
+    }
+
+    private java.util.List<String> errorDescriptions() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (com.intellij.codeInsight.daemon.impl.HighlightInfo i : myFixture.doHighlighting()) {
+            if (i.getSeverity() == com.intellij.lang.annotation.HighlightSeverity.ERROR) out.add(i.getDescription());
+        }
+        return out;
     }
 }

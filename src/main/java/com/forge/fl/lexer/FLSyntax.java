@@ -120,6 +120,43 @@ public final class FLSyntax {
         return "int"; // CHAR
     }
 
+    /**
+     * The value of a string literal token (spec 2.6): the quotes removed and the escapes decoded. Lenient: an
+     * escape that does not decode stays as written.
+     */
+    public static String decodeString(CharSequence token) {
+        int n = token.length();
+        int from = n > 0 && token.charAt(0) == '"' ? 1 : 0;
+        int to = n > from && token.charAt(n - 1) == '"' ? n - 1 : n;
+        StringBuilder sb = new StringBuilder();
+        for (int i = from; i < to; ) {
+            char c = token.charAt(i);
+            if (c != '\\') {
+                sb.append(c);
+                i++;
+                continue;
+            }
+            int next = readEscape(token, i, to, false);
+            if (next < 0) {
+                sb.append(c);
+                i++;
+                continue;
+            }
+            char e = token.charAt(i + 1);
+            switch (e) {
+                case 'n' -> sb.append('\n');
+                case 'r' -> sb.append('\r');
+                case 't' -> sb.append('\t');
+                case '0' -> sb.append('\0');
+                case 'x' -> sb.append((char) Integer.parseInt(token.subSequence(i + 2, i + 4).toString(), 16));
+                case 'u' -> sb.appendCodePoint(Integer.parseInt(token.subSequence(i + 3, next - 1).toString(), 16));
+                default -> sb.append(e); // \\ and \"
+            }
+            i = next;
+        }
+        return sb.toString();
+    }
+
     /** Whether a token text is a valid number (spec 2.4, 2.5). */
     static boolean isNumber(String run) {
         if (HEX_INT.matcher(run).matches() || BIN_INT.matcher(run).matches() || DEC_INT.matcher(run).matches()) {
