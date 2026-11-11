@@ -51,6 +51,13 @@ public class FLDefinition extends FLNamedElement {
         return null;
     }
 
+    @Nullable
+    @Override
+    public String getEffectText() {
+        FLHeader h = getHeader();
+        return h == null ? null : h.getText().replaceAll("\\s+", " ");
+    }
+
     @Override
     public String getLocationText() {
         FLHeader h = getHeader();

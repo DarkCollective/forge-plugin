@@ -1,6 +1,7 @@
 package com.forge.fl.psi;
 
 import com.forge.fl.FLTokenTypes;
+import com.forge.fl.builtins.FLBuiltins;
 import com.forge.fl.lexer.FLLexer;
 import com.intellij.lang.cacheBuilder.DefaultWordsScanner;
 import com.intellij.lang.cacheBuilder.WordsScanner;
@@ -35,7 +36,8 @@ public class FLFindUsagesProvider implements FindUsagesProvider {
     @NotNull
     @Override
     public String getType(@NotNull PsiElement element) {
-        return element instanceof FLNamedElement named ? named.getKindName() : "";
+        if (!(element instanceof FLNamedElement named)) return "";
+        return FLBuiltins.isBuiltin(element) ? "built-in " + named.getKindName() : named.getKindName();
     }
 
     @NotNull

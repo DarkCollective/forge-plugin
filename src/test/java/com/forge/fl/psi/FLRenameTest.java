@@ -64,7 +64,7 @@ public class FLRenameTest extends FLTestBase {
     }
 
     public void testUnresolvedIsSoft() {
-        myFixture.configureByText("t.fth", ": f ( -- ) <caret>dup other:thing ;\n");
+        myFixture.configureByText("t.fth", ": f ( -- ) <caret>nosuchword other:thing ;\n");
         PsiReference ref = myFixture.getFile().findReferenceAt(myFixture.getCaretOffset());
         assertNotNull(ref);
         assertTrue(ref.isSoft());

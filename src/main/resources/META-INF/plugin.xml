@@ -5,7 +5,7 @@
     <vendor email="hello@forge.dev" url="https://github.com/DarkCollective/forge">DarkCollective</vendor>
 
     <description><![CDATA[
-        Adds basic language support for the FL language used by the Forge project.
+        Language support for the FL language used by the Forge project: highlighting, name resolution across files and into the built-in words, find usages, rename and completion.
     ]]></description>
 
     <depends>com.intellij.modules.lang</depends>
@@ -30,6 +30,11 @@
         <lang.namesValidator language="FL" implementationClass="com.forge.fl.psi.FLNamesValidator"/>
         <renameInputValidator implementation="com.forge.fl.psi.FLParameterRenameValidator"/>
         <colorSettingsPage implementation="com.forge.fl.editor.FLColorSettingsPage"/>
+        <fileBasedIndex implementation="com.forge.fl.index.FLIndex"/>
+        <additionalLibraryRootsProvider implementation="com.forge.fl.builtins.FLBuiltinsLibraryProvider"/>
+        <referencesSearch implementation="com.forge.fl.search.FLReferencesSearcher"/>
+        <vetoRenameCondition implementation="com.forge.fl.psi.FLRenameVeto"/>
+        <postStartupActivity implementation="com.forge.fl.builtins.FLBuiltinsStartup"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
     </extensions>
 </idea-plugin>

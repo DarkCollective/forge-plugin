@@ -1,5 +1,8 @@
 package com.forge.fl.lexer;
 
+import com.forge.fl.FLTokenTypes;
+import com.intellij.psi.tree.IElementType;
+
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -100,6 +103,21 @@ public final class FLSyntax {
     /** A usable name for a new word, constant, variable, primitive or alias. */
     public static boolean isDefinableName(String s) {
         return isWordName(s) && !isReserved(s);
+    }
+
+    /**
+     * The header type name a literal token has (spec 5.10: the effect of a CONSTANT or VARIABLE is the type of its
+     * literal; a char literal makes an int).
+     */
+    public static String literalType(IElementType type, String text) {
+        if (type == FLTokenTypes.STRING) return "str";
+        if (type == FLTokenTypes.BYTES) return "bytes";
+        if (type == FLTokenTypes.BOOL) return "bool";
+        if (type == FLTokenTypes.NUMBER) {
+            boolean radix = text.startsWith("0x") || text.startsWith("0b") || text.startsWith("-0x") || text.startsWith("-0b");
+            return !radix && (text.indexOf('.') >= 0 || text.indexOf('e') >= 0 || text.indexOf('E') >= 0) ? "num" : "int";
+        }
+        return "int"; // CHAR
     }
 
     /** Whether a token text is a valid number (spec 2.4, 2.5). */

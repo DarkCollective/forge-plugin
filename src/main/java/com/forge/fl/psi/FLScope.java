@@ -1,5 +1,6 @@
 package com.forge.fl.psi;
 
+import com.forge.fl.FLTokenTypes;
 import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -14,8 +15,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The declarations of one file, grouped by vocabulary (docs/LANGUAGE.md 6.1, 6.2 restricted to a single file).
@@ -34,6 +37,9 @@ public final class FLScope {
     private final List<Decl> all = new ArrayList<>();
     private final List<int[]> inOffsets = new ArrayList<>(); // {end offset of the IN: form}
     private final List<String> inVocabs = new ArrayList<>();
+    /** Per USING: form: {start offset} and its names, in file order. */
+    private final List<Integer> usingStarts = new ArrayList<>();
+    private final List<List<String>> usingNames = new ArrayList<>();
 
     @NotNull
     public static FLScope of(@NotNull PsiFile file) {
@@ -50,6 +56,13 @@ public final class FLScope {
                     s.inOffsets.add(new int[]{in.getTextRange().getEndOffset()});
                     s.inVocabs.add(v);
                 }
+            } else if (child.getNode().getElementType() == FLElementTypes.USING_FORM) {
+                List<String> names = new ArrayList<>();
+                for (PsiElement leaf = child.getFirstChild(); leaf != null; leaf = leaf.getNextSibling()) {
+                    if (leaf.getNode().getElementType() == FLTokenTypes.WORD_NAME) names.add(leaf.getText());
+                }
+                s.usingStarts.add(child.getTextRange().getStartOffset());
+                s.usingNames.add(names);
             } else if (child instanceof FLDefinition || child instanceof FLConstant || child instanceof FLPrimitive) {
                 s.declare((FLNamedElement) child, child);
             } else if (child instanceof FLVariable v) {
@@ -87,6 +100,29 @@ public final class FLScope {
         return v;
     }
 
+    /**
+     * The import list at {@code offset} (docs/LANGUAGE.md 5.3): the names of every USING: form that starts before
+     * it, in order, without duplicates. {@code core} is dropped: it is always implicitly last.
+     */
+    @NotNull
+    public List<String> usingAt(int offset) {
+        Set<String> seen = new LinkedHashSet<>();
+        for (int k = 0; k < usingStarts.size() && usingStarts.get(k) < offset; k++) {
+            for (String name : usingNames.get(k)) {
+                if (!name.equals("core")) seen.add(name);
+            }
+        }
+        return new ArrayList<>(seen);
+    }
+
+    /** Every vocabulary this file switches to or declares into (not the implicit {@code user} unless used). */
+    @NotNull
+    public Set<String> vocabularies() {
+        Set<String> out = new LinkedHashSet<>(inVocabs);
+        for (Decl d : all) out.add(d.vocab());
+        return out;
+    }
+
     /** Declarations of {@code name} in {@code vocab}, in file order. */
     @NotNull
     public List<Decl> find(String vocab, String name) {
@@ -99,16 +135,22 @@ public final class FLScope {
     }
 
     /**
-     * No forward references: prefer the last declaration that ends before {@code formStart} (the start of the
-     * top-level form that holds the use); inside its own body a name means the earlier definition. Otherwise
-     * fall back to the first declaration of the name in that vocabulary.
+     * No forward references: the last declaration that ends before {@code formStart} (the start of the top-level
+     * form that holds the use); inside its own body a name means the earlier definition. Null when there is none.
      */
     @Nullable
-    public static FLNamedElement pick(List<Decl> candidates, int formStart) {
+    public static FLNamedElement pickEarlier(List<Decl> candidates, int formStart) {
         FLNamedElement best = null;
         for (Decl d : candidates) {
             if (d.end() <= formStart) best = d.element();
         }
+        return best;
+    }
+
+    /** The phase 1 rule: {@link #pickEarlier}, else the first declaration (a forward reference), else null. */
+    @Nullable
+    public static FLNamedElement pick(List<Decl> candidates, int formStart) {
+        FLNamedElement best = pickEarlier(candidates, formStart);
         if (best != null) return best;
         return candidates.isEmpty() ? null : candidates.get(0).element();
     }

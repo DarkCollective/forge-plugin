@@ -3,9 +3,6 @@ package com.forge.fl.psi;
 import com.forge.fl.FLTokenTypes;
 import com.intellij.lang.ASTNode;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiReference;
-import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,9 +15,9 @@ public class FLWordRef extends FLPsiElement {
         super(node);
     }
 
-    @Nullable
+    @NotNull
     @Override
-    public PsiReference getReference() {
+    public FLWordReference getReference() {
         return new FLWordReference(this);
     }
 
@@ -49,26 +46,10 @@ public class FLWordRef extends FLPsiElement {
         return t.substring(t.indexOf(':') + 1);
     }
 
-    /** Resolution per docs/LANGUAGE.md 6.2 and 6.3, restricted to this file. */
+    /** The single declaration this use resolves to (docs/LANGUAGE.md section 6); null when unresolved or ambiguous. */
     @Nullable
     PsiElement resolveTarget() {
-        PsiFile file = getContainingFile();
-        if (file == null) return null;
-        FLScope scope = FLScope.of(file);
-        PsiElement top = this;
-        while (top.getParent() != null && !(top.getParent() instanceof PsiFile)) top = top.getParent();
-        int formStart = top.getTextRange().getStartOffset();
-        String vocab = getVocab();
-        String name = getBareName();
-        if (vocab == null) {
-            FLDefinition def = PsiTreeUtil.getParentOfType(this, FLDefinition.class);
-            if (def != null) {
-                FLParameter p = def.findParameter(name);
-                if (p != null) return p;
-            }
-            vocab = scope.vocabAt(getTextRange().getStartOffset());
-        }
-        return FLScope.pick(scope.find(vocab, name), formStart);
+        return getReference().resolve();
     }
 
     /** Replaces the name part (after any {@code vocab:}) with {@code newName}, plus {@code !} when asked. */

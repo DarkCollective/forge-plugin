@@ -12,6 +12,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class FLTestBase extends BasePlatformTestCase {
+    @Override
+    protected void setUp() throws Exception {
+        com.forge.fl.builtins.FLBuiltins.prepare(); // before the project computes its library roots
+        super.setUp();
+        com.forge.fl.builtins.FLBuiltins.prepare();
+    }
+
     protected PsiFile parse(String text) {
         return myFixture.configureByText("test.fth", text);
     }
