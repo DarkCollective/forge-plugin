@@ -79,6 +79,7 @@ public class FLCompletionContributor extends CompletionContributor {
             CompletionResultSet r = result.withPrefixMatcher(new PlainPrefixMatcher(typed, true));
             Set<String> names = new LinkedHashSet<>(scope.vocabularies());
             names.addAll(FLIndexLookup.vocabularies(file.getProject()));
+            names.add(FLScope.DEFAULT_VOCAB); // the default vocabulary always exists
             names.remove("core");
             for (String v : names) r.addElement(LookupElementBuilder.create(v).withTypeText("vocabulary"));
             return;

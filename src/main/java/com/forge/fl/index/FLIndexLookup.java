@@ -112,7 +112,10 @@ public final class FLIndexLookup {
     /** All vocabulary names known to the index. */
     @NotNull
     public static Set<String> vocabularies(@NotNull Project project) {
-        return keysWithPrefix(project, "V").stream().map(k -> k.substring(1)).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        // processAllKeys may report keys whose files are gone (the persisted index keeps stale keys), so only
+        // vocabularies that still have a file count.
+        return keysWithPrefix(project, "V").stream().filter(k -> !hits(project, k).isEmpty())
+                .map(k -> k.substring(1)).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
 
     /**

@@ -110,7 +110,7 @@ public class FLCompletionTest extends FLMultiFileTestBase {
         seedVocabularies();
         for (String form : new String[]{"USING: ", "IN: "}) {
             List<String> names = strings(complete("m" + form.length() + ".fth", form + "<caret>\n"));
-            assertTrue(form + names, names.containsAll(List.of("a", "hex", "raise", "util", "user")));
+            assertTrue(form + names, names.containsAll(List.of("a", "hex", "raise", "user")));
             assertFalse("core cannot be imported or entered", names.contains("core"));
             assertFalse("words are not offered here", names.contains("dup") || names.contains("pubw"));
         }
