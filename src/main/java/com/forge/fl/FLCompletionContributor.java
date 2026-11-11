@@ -26,6 +26,12 @@ public class FLCompletionContributor extends CompletionContributor {
                         result.addElement(LookupElementBuilder.create("CONSTANT"));
                         result.addElement(LookupElementBuilder.create("VARIABLE"));
                         result.addElement(LookupElementBuilder.create("PRIMITIVE"));
+                        result.addElement(LookupElementBuilder.create("doc"));
+                        result.addElement(LookupElementBuilder.create("category"));
+                        result.addElement(LookupElementBuilder.create("version"));
+                        result.addElement(LookupElementBuilder.create("param"));
+                        result.addElement(LookupElementBuilder.create("alias"));
+                        result.addElement(LookupElementBuilder.create("see-also"));
                         result.addElement(LookupElementBuilder.create("recurse"));
                         result.addElement(LookupElementBuilder.create("dup"));
                         result.addElement(LookupElementBuilder.create("drop"));
@@ -37,6 +43,14 @@ public class FLCompletionContributor extends CompletionContributor {
                         result.addElement(LookupElementBuilder.create("then"));
                         result.addElement(LookupElementBuilder.create("true"));
                         result.addElement(LookupElementBuilder.create("false"));
+                        result.addElement(LookupElementBuilder.create("any"));
+                        result.addElement(LookupElementBuilder.create("int"));
+                        result.addElement(LookupElementBuilder.create("num"));
+                        result.addElement(LookupElementBuilder.create("str"));
+                        result.addElement(LookupElementBuilder.create("bytes"));
+                        result.addElement(LookupElementBuilder.create("bool"));
+                        result.addElement(LookupElementBuilder.create("choice{}"));
+                        result.addElement(LookupElementBuilder.create("key{}"));
                     }
                 }
         );

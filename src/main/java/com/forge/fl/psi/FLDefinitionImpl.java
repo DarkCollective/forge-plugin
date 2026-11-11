@@ -20,4 +20,20 @@ public class FLDefinitionImpl extends ASTWrapperPsiElement implements FLDefiniti
         }
         return "";
     }
+
+    @Override
+    public PsiElement getNameIdentifier() {
+        PsiElement[] children = getChildren();
+        for (PsiElement child : children) {
+            if (child instanceof FLWordElement) {
+                return child;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public PsiElement setName(@NotNull String name) {
+        throw new UnsupportedOperationException("FL definitions are not renamed by the PSI model yet");
+    }
 }
