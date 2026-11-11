@@ -34,6 +34,10 @@ public class FLDefinitionImpl extends ASTWrapperPsiElement implements FLDefiniti
 
     @Override
     public PsiElement setName(@NotNull String name) {
-        throw new UnsupportedOperationException("FL definitions are not renamed by the PSI model yet");
+        PsiElement identifier = getNameIdentifier();
+        if (identifier instanceof FLWordElement word) {
+            return word.setName(name);
+        }
+        return this;
     }
 }

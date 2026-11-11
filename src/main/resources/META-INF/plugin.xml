@@ -26,6 +26,7 @@
         <lang.psiStructureViewFactory language="FL" implementationClass="com.forge.fl.editor.FLStructureViewFactory"/>
         <psi.referenceContributor implementation="com.forge.fl.psi.FLReferenceContributor"/>
         <lang.findUsagesProvider language="FL" implementationClass="com.forge.fl.psi.FLFindUsagesProvider"/>
+        <renameInputValidator implementation="com.forge.fl.psi.FLRenameInputValidator"/>
         <colorSettingsPage implementation="com.forge.fl.editor.FLColorSettingsPage"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
     </extensions>

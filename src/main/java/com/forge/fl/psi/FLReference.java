@@ -37,6 +37,11 @@ public class FLReference extends PsiReferenceBase<FLWordElement> {
     }
 
     @Override
+    public PsiElement handleElementRename(String newName) {
+        return myElement.setName(newName);
+    }
+
+    @Override
     public boolean isSoft() {
         return true;
     }
