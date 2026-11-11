@@ -4,6 +4,7 @@ import com.forge.fl.FLFile;
 import com.forge.fl.FLTokenTypes;
 import com.forge.fl.psi.FLDefinitionImpl;
 import com.forge.fl.psi.FLFileElement;
+import com.forge.fl.psi.FLHeaderImpl;
 import com.forge.fl.psi.FLWordElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.ParserDefinition;
@@ -51,6 +52,9 @@ public class FLParserDefinition implements ParserDefinition {
         }
         if (node.getElementType() == FLTokenTypes.DEFINITION) {
             return new FLDefinitionImpl(node);
+        }
+        if (node.getElementType() == FLTokenTypes.HEADER) {
+            return new FLHeaderImpl(node);
         }
         return new FLFileElement(node);
     }
