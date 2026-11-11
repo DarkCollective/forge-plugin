@@ -43,6 +43,10 @@ public class FLLexer extends LexerBase {
             "source"
     );
 
+    private static final String[] MULTIWORD_KEYWORDS = {
+            "IN:", "USING:", "META:", "VOCAB", "CONSTANT", "VARIABLE", "PRIMITIVE"
+    };
+
     private CharSequence myBuffer;
     private int myStart;
     private int myEnd;
@@ -149,16 +153,30 @@ public class FLLexer extends LexerBase {
         }
 
         if (isNameStart(c)) {
-            myTokenType = FLTokenTypes.IDENTIFIER;
-            myIndex++;
-            while (myIndex < myEnd && isNameChar(myBuffer.charAt(myIndex))) {
-                myIndex++;
+            int scan = myIndex;
+            while (scan < myEnd && isNameChar(myBuffer.charAt(scan))) {
+                scan++;
             }
-            String word = myBuffer.subSequence(myTokenStart, myIndex).toString();
-            if (KEYWORDS.contains(word)) {
+            String word = myBuffer.subSequence(myIndex, scan).toString();
+            for (String keyword : MULTIWORD_KEYWORDS) {
+                if (word.equals(keyword) || word.equals(keyword.substring(0, keyword.length() - 1))) {
+                    myTokenType = FLTokenTypes.KEYWORD;
+                    myIndex = scan;
+                    if (word.length() < keyword.length()) {
+                        myIndex = myIndex + (keyword.length() - word.length());
+                    }
+                    myTokenEnd = myIndex;
+                    return;
+                }
+            }
+
+            myTokenType = FLTokenTypes.IDENTIFIER;
+            myIndex = scan;
+            String identifier = myBuffer.subSequence(myTokenStart, myIndex).toString();
+            if (KEYWORDS.contains(identifier)) {
                 myTokenType = FLTokenTypes.KEYWORD;
             }
-            if ("true".equals(word) || "false".equals(word)) {
+            if ("true".equals(identifier) || "false".equals(identifier)) {
                 myTokenType = FLTokenTypes.BOOLEAN;
             }
             myTokenEnd = myIndex;
