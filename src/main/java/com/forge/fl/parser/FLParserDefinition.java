@@ -56,6 +56,9 @@ public class FLParserDefinition implements ParserDefinition {
         if (node.getElementType() == FLTokenTypes.HEADER) {
             return new FLHeaderImpl(node);
         }
+        if (node.getElementType() == FLTokenTypes.METADATA) {
+            return new com.forge.fl.psi.FLMetadataBlockImpl(node);
+        }
         return new FLFileElement(node);
     }
 

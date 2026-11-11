@@ -21,7 +21,26 @@ public class FLLexer extends LexerBase {
             "PRIMITIVE",
             "recurse",
             "true",
-            "false"
+            "false",
+            "param",
+            "category",
+            "doc",
+            "version",
+            "alias",
+            "aliases",
+            "see-also",
+            "seeAlso",
+            "name",
+            "vocab",
+            "qname",
+            "kind",
+            "exported",
+            "op",
+            "effect",
+            "params",
+            "effects",
+            "hash",
+            "source"
     );
 
     private CharSequence myBuffer;

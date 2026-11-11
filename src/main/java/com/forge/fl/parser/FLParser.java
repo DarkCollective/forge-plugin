@@ -57,6 +57,35 @@ public class FLParser implements PsiParser {
                 continue;
             }
 
+            if (tokenType == FLTokenTypes.KEYWORD && "META:".equals(builder.getTokenText())) {
+                PsiBuilder.Marker metadata = builder.mark();
+                builder.advanceLexer();
+                while (!builder.eof()) {
+                    IElementType current = builder.getTokenType();
+                    if (current == FLTokenTypes.KEYWORD && ";".equals(builder.getTokenText())) {
+                        builder.advanceLexer();
+                        break;
+                    }
+                    if (current == FLTokenTypes.KEYWORD && ":".equals(builder.getTokenText())) {
+                        PsiBuilder.Marker clause = builder.mark();
+                        builder.advanceLexer();
+                        while (!builder.eof()) {
+                            IElementType next = builder.getTokenType();
+                            if (next == FLTokenTypes.KEYWORD && ";".equals(builder.getTokenText())) {
+                                builder.advanceLexer();
+                                break;
+                            }
+                            builder.advanceLexer();
+                        }
+                        clause.done(FLTokenTypes.METADATA);
+                        continue;
+                    }
+                    builder.advanceLexer();
+                }
+                metadata.done(FLTokenTypes.METADATA);
+                continue;
+            }
+
             PsiBuilder.Marker marker = builder.mark();
             builder.advanceLexer();
 

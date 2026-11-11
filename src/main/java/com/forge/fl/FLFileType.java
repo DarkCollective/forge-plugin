@@ -15,13 +15,13 @@ public final class FLFileType extends LanguageFileType {
     @NotNull
     @Override
     public String getName() {
-        return "FL";
+        return "FL / FTH";
     }
 
     @NotNull
     @Override
     public String getDescription() {
-        return "Forge FL source file";
+        return "Forge FL / FTH source file";
     }
 
     @NotNull
