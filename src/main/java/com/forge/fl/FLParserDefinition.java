@@ -1,0 +1,63 @@
+package com.forge.fl;
+
+import com.intellij.lang.ASTNode;
+import com.intellij.lang.ParserDefinition;
+import com.intellij.lang.PsiParser;
+import com.intellij.lexer.Lexer;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.FileViewProvider;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.tree.IFileElementType;
+import com.intellij.psi.tree.TokenSet;
+import org.jetbrains.annotations.NotNull;
+
+public class FLParserDefinition implements ParserDefinition {
+    @NotNull
+    @Override
+    public Lexer createLexer(Project project) {
+        return new FLLexer();
+    }
+
+    @Override
+    public @NotNull TokenSet getCommentTokens() {
+        return FLTokenTypes.COMMENTS;
+    }
+
+    @Override
+    public @NotNull TokenSet getStringLiteralElements() {
+        return FLTokenTypes.STRINGS;
+    }
+
+    @Override
+    public @NotNull PsiParser createParser(Project project) {
+        return (root, builder) -> builder.getTreeBuilt();
+    }
+
+    @Override
+    public @NotNull IFileElementType getFileNodeType() {
+        return FLTokenTypes.FILE;
+    }
+
+    @Override
+    public @NotNull PsiElement createElement(ASTNode node) {
+        return new FLFileElement(node);
+    }
+
+    @NotNull
+    @Override
+    public PsiFile createFile(@NotNull FileViewProvider viewProvider) {
+        return new FLFile(viewProvider);
+    }
+
+    @Override
+    public @NotNull SpaceRequirements spaceExistenceTypeBetweenTokens(ASTNode left, ASTNode right) {
+        return SpaceRequirements.MAY;
+    }
+
+    @NotNull
+    @Override
+    public TokenSet getWhitespaceTokens() {
+        return TokenSet.WHITE_SPACE;
+    }
+}

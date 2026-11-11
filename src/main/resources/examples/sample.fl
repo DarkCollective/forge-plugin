@@ -1,0 +1,19 @@
+\ line comments start with a backslash
+\ FL is a stack-based language
+
+IN: core
+USING: list
+
+CONSTANT pi 3.141592653589793
+
+: square ( n -- n*n )
+  dup *
+;
+
+: hello ( -- )
+  "Hello from FL" emit
+;
+
+{ 1 2 3 }
+#[ de ad be ef ]
+true false

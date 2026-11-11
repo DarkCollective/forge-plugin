@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>com.forge.fl</id>
+    <name>Forge FL</name>
+    <version>0.1.0</version>
+    <vendor email="hello@forge.dev" url="https://github.com/DarkCollective/forge">DarkCollective</vendor>
+
+    <description><![CDATA[
+        Adds basic language support for the FL language used by the Forge project.
+    ]]></description>
+
+    <depends>com.intellij.modules.lang</depends>
+
+    <idea-version since-build="241.0" until-build="243.*"/>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="FL"
+                  language="FL"
+                  implementationClass="com.forge.fl.FLFileType"
+                  fieldName="INSTANCE"
+                  extensions="fl;fth;forge"/>
+
+        <lang.parserDefinition language="FL" implementationClass="com.forge.fl.parser.FLParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="FL" implementationClass="com.forge.fl.highlighting.FLSyntaxHighlighterFactory"/>
+        <lang.braceMatcher language="FL" implementationClass="com.forge.fl.editor.FLBraceMatcher"/>
+        <lang.commenter language="FL" implementationClass="com.forge.fl.editor.FLCommenter"/>
+        <colorSettingsPage implementation="com.forge.fl.editor.FLColorSettingsPage"/>
+        <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
+    </extensions>
+</idea-plugin>
