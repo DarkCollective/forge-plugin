@@ -1,19 +1,51 @@
-\ line comments start with a backslash
-\ FL is a stack-based language
+\ Sample FL source exercising every form (see docs/LANGUAGE.md section 5).
+\ A line comment is a standalone backslash; a block comment is a standalone ( ... ) that does not follow ": name".
+IN: sample
+USING: util classical ;
 
-IN: core
-USING: list
+( A block comment, ended by a standalone close paren )
 
-CONSTANT pi 3.141592653589793
+256 CONSTANT block-size
+0 VARIABLE counter
+"hello" CONSTANT greeting
+PRIMITIVE raw-sum
 
-: square ( n -- n*n )
-  dup *
+\ A private word with bare labels: a and b are locals.
+: _add ( a b -- c )
+  a b + ;
+
+\ A public word: named inputs with types, a constraint and a default.
+: shift ( text:str amount:int[1..25]=13 -- str )
+  "Shifts each letter by a fixed amount." doc
+  "Classical ciphers" category
+  text amount classical:rot ;
+
+: bump ( -- int )
+  counter 1 + dup counter! ;
+
+: describe ( n:int -- str )
+  n 0 > [ "positive" ] [ "not positive" ] if ;
+
+: countdown ( n:int -- )
+  n 0 > [ n 1 - recurse ] [ ] if ;
+
+: lists ( -- list )
+  { 1 2.5 -3 0x1F 0b101 1_000 'a' "text" true false #[ de ad be ef ] { } } ;
+
+: pick-mode ( data:bytes mode:choice{cbc|ctr|gcm}=cbc key:key{hex|utf8}[16|24|32] -- bytes )
+  data ;
+
+META: shift
+  version "1" ;
+  param amount "Shift (13 = ROT13)" ;
+  alias rot13 ;
+  see-also classical:atbash ;
+  see-also describe ;
 ;
 
-: hello ( -- )
-  "Hello from FL" emit
+META: describe
+  doc "Says whether a number is positive." ;
+  category "Examples" ;
 ;
 
-{ 1 2 3 }
-#[ de ad be ef ]
-true false
+\ VOCAB v is the console form of IN: and is not allowed in a source unit, so it is not used here.

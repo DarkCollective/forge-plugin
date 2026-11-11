@@ -16,6 +16,10 @@ java {
     }
 }
 
+dependencies {
+    testImplementation("junit:junit:4.13.2")
+}
+
 intellij {
     version.set("2024.1.1")
     type.set("IC")
@@ -35,5 +39,10 @@ tasks {
 
     buildSearchableOptions {
         enabled = false
+    }
+
+    test {
+        // Run the optional corpus check: ./gradlew test -Dfl.corpus=/path/to/dir-of-.fth-files
+        System.getProperty("fl.corpus")?.let { systemProperty("fl.corpus", it) }
     }
 }

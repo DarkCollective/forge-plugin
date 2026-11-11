@@ -24,11 +24,11 @@
         <lang.braceMatcher language="FL" implementationClass="com.forge.fl.editor.FLBraceMatcher"/>
         <lang.commenter language="FL" implementationClass="com.forge.fl.editor.FLCommenter"/>
         <lang.psiStructureViewFactory language="FL" implementationClass="com.forge.fl.editor.FLStructureViewFactory"/>
-        <psi.referenceContributor implementation="com.forge.fl.psi.FLReferenceContributor"/>
         <lang.findUsagesProvider language="FL" implementationClass="com.forge.fl.psi.FLFindUsagesProvider"/>
         <lang.refactoringSupport language="FL" implementationClass="com.forge.fl.psi.FLRefactoringSupportProvider"/>
         <renamePsiElementProcessor implementation="com.forge.fl.psi.FLRenamePsiElementProcessor"/>
-        <renameInputValidator implementation="com.forge.fl.psi.FLRenameInputValidator"/>
+        <lang.namesValidator language="FL" implementationClass="com.forge.fl.psi.FLNamesValidator"/>
+        <renameInputValidator implementation="com.forge.fl.psi.FLParameterRenameValidator"/>
         <colorSettingsPage implementation="com.forge.fl.editor.FLColorSettingsPage"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
     </extensions>

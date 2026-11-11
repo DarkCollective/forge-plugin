@@ -8,11 +8,11 @@ import com.intellij.psi.tree.IElementType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/** Matches {@code [ ]} and {@code { }}; the header parentheses are not single tokens. */
 public class FLBraceMatcher implements PairedBraceMatcher {
-    private static final BracePair[] PAIRS = new BracePair[] {
-            new BracePair(FLTokenTypes.LBRACKET, FLTokenTypes.RBRACKET, true),
-            new BracePair(FLTokenTypes.LBRACE, FLTokenTypes.RBRACE, true),
-            new BracePair(FLTokenTypes.LPAREN, FLTokenTypes.RPAREN, true)
+    private static final BracePair[] PAIRS = {
+            new BracePair(FLTokenTypes.LBRACKET, FLTokenTypes.RBRACKET, false),
+            new BracePair(FLTokenTypes.LBRACE, FLTokenTypes.RBRACE, false),
     };
 
     @Override
@@ -26,7 +26,7 @@ public class FLBraceMatcher implements PairedBraceMatcher {
     }
 
     @Override
-    public int getCodeConstructStart(@NotNull PsiFile file, int openingBraceOffset) {
+    public int getCodeConstructStart(PsiFile file, int openingBraceOffset) {
         return openingBraceOffset;
     }
 }
