@@ -3,9 +3,9 @@ package com.forge.fl.parser;
 import com.forge.fl.FLFile;
 import com.forge.fl.FLTokenTypes;
 import com.forge.fl.psi.FLFileElement;
+import com.forge.fl.psi.FLWordElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.ParserDefinition;
-import com.intellij.lang.PsiBuilder;
 import com.intellij.lang.PsiParser;
 import com.intellij.lexer.Lexer;
 import com.intellij.openapi.project.Project;
@@ -35,7 +35,7 @@ public class FLParserDefinition implements ParserDefinition {
 
     @Override
     public @NotNull PsiParser createParser(Project project) {
-        return (root, builder) -> builder.getTreeBuilt();
+        return new FLParser();
     }
 
     @Override
@@ -45,6 +45,9 @@ public class FLParserDefinition implements ParserDefinition {
 
     @Override
     public @NotNull PsiElement createElement(ASTNode node) {
+        if (node.getElementType() == FLTokenTypes.WORD) {
+            return new FLWordElement(node);
+        }
         return new FLFileElement(node);
     }
 

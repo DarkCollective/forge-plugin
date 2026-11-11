@@ -1,5 +1,6 @@
 package com.forge.fl;
 
+import com.forge.fl.psi.FLWordElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.ParserDefinition;
 import com.intellij.lang.PsiParser;
@@ -31,7 +32,7 @@ public class FLParserDefinition implements ParserDefinition {
 
     @Override
     public @NotNull PsiParser createParser(Project project) {
-        return (root, builder) -> builder.getTreeBuilt();
+        return new com.forge.fl.parser.FLParser();
     }
 
     @Override
@@ -41,6 +42,9 @@ public class FLParserDefinition implements ParserDefinition {
 
     @Override
     public @NotNull PsiElement createElement(ASTNode node) {
+        if (node.getElementType() == FLTokenTypes.WORD) {
+            return new FLWordElement(node);
+        }
         return new FLFileElement(node);
     }
 
