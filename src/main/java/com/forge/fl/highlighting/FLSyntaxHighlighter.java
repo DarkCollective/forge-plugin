@@ -28,6 +28,8 @@ public class FLSyntaxHighlighter extends SyntaxHighlighterBase {
             TextAttributesKey.createTextAttributesKey("FL_BOOLEAN", DefaultLanguageHighlighterColors.KEYWORD);
     public static final TextAttributesKey FL_IDENTIFIER =
             TextAttributesKey.createTextAttributesKey("FL_IDENTIFIER", DefaultLanguageHighlighterColors.IDENTIFIER);
+    public static final TextAttributesKey FL_METADATA =
+            TextAttributesKey.createTextAttributesKey("FL_METADATA", DefaultLanguageHighlighterColors.KEYWORD);
     public static final TextAttributesKey FL_BAD_CHARACTER =
             TextAttributesKey.createTextAttributesKey("FL_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER);
 
@@ -40,6 +42,7 @@ public class FLSyntaxHighlighter extends SyntaxHighlighterBase {
         fillMap(ATTRS, FLTokenTypes.KEYWORDS, FL_KEYWORD);
         ATTRS.put(FLTokenTypes.BOOLEAN, FL_BOOLEAN);
         ATTRS.put(FLTokenTypes.IDENTIFIER, FL_IDENTIFIER);
+        ATTRS.put(FLTokenTypes.METADATA, FL_METADATA);
         ATTRS.put(TokenType.BAD_CHARACTER, FL_BAD_CHARACTER);
     }
 

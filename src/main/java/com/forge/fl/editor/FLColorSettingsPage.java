@@ -21,6 +21,7 @@ public class FLColorSettingsPage implements ColorSettingsPage {
             new AttributesDescriptor("Keyword", FLSyntaxHighlighter.FL_KEYWORD),
             new AttributesDescriptor("Boolean", FLSyntaxHighlighter.FL_BOOLEAN),
             new AttributesDescriptor("Identifier", FLSyntaxHighlighter.FL_IDENTIFIER),
+            new AttributesDescriptor("Metadata", FLSyntaxHighlighter.FL_METADATA),
             new AttributesDescriptor("Bad Character", FLSyntaxHighlighter.FL_BAD_CHARACTER)
     };
 
@@ -58,10 +59,16 @@ public class FLColorSettingsPage implements ColorSettingsPage {
     @Override
     public String getDemoText() {
         return "\\ line comments\n" +
-                "true false\n" +
-                "IN: core\n" +
-                ": greet ( -- )\n" +
-                "  42 3.14 \"hello\"\n" +
+                "IN: argon2\n" +
+                "\n" +
+                ": derive ( password:bytes salt:key{utf8|hex}=\"somesalt\" -- bytes )\n" +
+                "  \"The Argon2 hash of the input password.\" doc\n" +
+                "  \"Key derivation\" category\n" +
+                "  password salt _derive ;\n" +
+                "\n" +
+                "META: derive\n" +
+                "  param salt \"The salt, at least 8 bytes.\" ;\n" +
+                "  see-also argon2:compare ;\n" +
                 ";\n";
     }
 
