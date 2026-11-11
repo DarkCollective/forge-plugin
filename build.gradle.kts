@@ -28,10 +28,6 @@ tasks {
         options.release.set(17)
     }
 
-    named("initializeIntelliJPlugin") {
-        enabled = false
-    }
-
     patchPluginXml {
         sinceBuild.set("241")
         untilBuild.set("999.*")
