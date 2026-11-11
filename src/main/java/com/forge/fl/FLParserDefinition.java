@@ -1,5 +1,6 @@
 package com.forge.fl;
 
+import com.forge.fl.psi.FLDefinitionImpl;
 import com.forge.fl.psi.FLWordElement;
 import com.intellij.lang.ASTNode;
 import com.intellij.lang.ParserDefinition;
@@ -44,6 +45,9 @@ public class FLParserDefinition implements ParserDefinition {
     public @NotNull PsiElement createElement(ASTNode node) {
         if (node.getElementType() == FLTokenTypes.WORD) {
             return new FLWordElement(node);
+        }
+        if (node.getElementType() == FLTokenTypes.DEFINITION) {
+            return new FLDefinitionImpl(node);
         }
         return new FLFileElement(node);
     }
