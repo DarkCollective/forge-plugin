@@ -19,6 +19,8 @@
                   extensions="fl;fth;forge"/>
 
         <lang.parserDefinition language="FL" implementationClass="com.forge.fl.parser.FLParserDefinition"/>
+        <lang.formatter language="FL" implementationClass="com.forge.fl.formatting.FLFormattingModelBuilder"/>
+        <postFormatProcessor implementation="com.forge.fl.formatting.FLTrailingWhitespaceProcessor"/>
         <lang.syntaxHighlighterFactory language="FL" implementationClass="com.forge.fl.highlighting.FLSyntaxHighlighterFactory"/>
         <lang.braceMatcher language="FL" implementationClass="com.forge.fl.editor.FLBraceMatcher"/>
         <lang.commenter language="FL" implementationClass="com.forge.fl.editor.FLCommenter"/>
@@ -41,6 +43,9 @@
         <localInspection language="FL" shortName="FLShadow" displayName="Parameter hides a word"
                          groupName="FL" enabledByDefault="true" level="WEAK WARNING"
                          implementationClass="com.forge.fl.diagnostics.FLShadowInspection"/>
+        <localInspection language="FL" shortName="FLMetaPlacement" displayName="META block not next to definition"
+                         groupName="FL" enabledByDefault="true" level="WARNING" cleanupTool="true"
+                         implementationClass="com.forge.fl.diagnostics.FLMetaPlacementInspection"/>
         <annotator language="FL" implementationClass="com.forge.fl.highlighting.FLSemanticAnnotator"/>
         <lang.documentationProvider language="FL" implementationClass="com.forge.fl.doc.FLDocumentationProvider"/>
         <gotoSymbolContributor implementation="com.forge.fl.navigation.FLGotoSymbolContributor"/>
@@ -50,5 +55,9 @@
         <breadcrumbsInfoProvider implementation="com.forge.fl.editor.FLBreadcrumbsProvider"/>
         <indexPatternBuilder implementation="com.forge.fl.editor.FLIndexPatternBuilder"/>
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
+        <intentionAction>
+            <className>com.forge.fl.intentions.FLMoveMetaBlockIntention</className>
+            <category>FL</category>
+        </intentionAction>
     </extensions>
 </idea-plugin>

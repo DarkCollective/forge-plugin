@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The JDK is chosen by Gradle toolchains (Java 17); no machine-specific `java.home` any more.
 
 ### Added
+- FL code formatter for top-level forms, definition bodies, quotations/lists and `META:` clauses.
+- Formatter removes extra trailing blank lines while preserving an existing final newline.
+- Intention to move a `META:` block next to the colon definition it annotates.
+- Code Cleanup inspection and quick fix for relocating misplaced `META:` blocks.
 - Plugin Verifier (`./gradlew verifyPlugin`) against 2024.1.1 and 2026.3.
 - GitHub Actions workflow that builds, tests and verifies the plugin.
 - Licence headers on every source file.

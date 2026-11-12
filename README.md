@@ -6,6 +6,11 @@ This is a starter IntelliJ plugin for the FL language described in `docs/LANGUAG
 
 - `.fl` / `.fth` file type support, with a lexer and parser that follow `docs/LANGUAGE.md` sections 2 and 5
 - syntax highlighting, including stack-effect headers and parameters
+- code formatting for top-level forms, definition bodies, quotations/lists and `META:` clauses; indentation follows
+  the IntelliJ code-style settings, and extra trailing blank lines are removed
+- the “Move META block next to definition” intention for relocating a block to its resolved colon word
+- an enabled-by-default, Code Cleanup-compatible inspection for misplaced `META:` blocks; in the Reformat File
+  dialog, enable **Code cleanup** to apply its move fix together with the formatter
 - name resolution as in `docs/LANGUAGE.md` section 6, across files and into the built-in words: parameter, current
   vocabulary (`IN:`), imports (`USING:`, an ambiguous name is a poly-variant reference with the candidates in
   `USING:` order), then `core`; qualified `vocab:name` (a private `_name` only from its own vocabulary); `META:`
