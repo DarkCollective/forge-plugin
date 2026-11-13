@@ -91,6 +91,7 @@ public class FLSyntaxHighlighter extends SyntaxHighlighterBase {
         ATTRS.put(FLTokenTypes.HDR_PARAM_NAME, HEADER_PARAMETER);
         ATTRS.put(FLTokenTypes.HDR_PARAM_REST, HEADER_PARAMETER_DETAILS);
         ATTRS.put(FLTokenTypes.HDR_OTHER, HEADER_PARAMETER_DETAILS);
+        ATTRS.put(FLTokenTypes.HDR_CHOICE_REF, HEADER_TYPE);
         ATTRS.put(FLTokenTypes.HDR_TYPE, HEADER_TYPE);
         ATTRS.put(FLTokenTypes.HDR_ARROW, HEADER_ARROW);
         ATTRS.put(FLTokenTypes.HDR_DOTS, HEADER_ARROW);

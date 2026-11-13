@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
  * @param detail stack effect text for words, {@code ( -- int )} style effect for constants and variables, else null
  */
 public record FLIndexEntry(byte kind, int offset, @Nullable String detail) {
-    /** Entry kinds. USAGE and VOCAB are not declarations. */
+    /** Entry kinds. USAGE and VOCAB are not declarations; CHOICE_TYPE is, in a key family of its own. */
     public static final class Kind {
         public static final byte USAGE = 0;
         public static final byte WORD = 1;
@@ -23,12 +23,14 @@ public record FLIndexEntry(byte kind, int offset, @Nullable String detail) {
         public static final byte ALIAS = 6;
         /** The file declares into, or switches to, a vocabulary ({@code IN:}). */
         public static final byte VOCAB = 7;
+        /** A shared choice type, {@code CHOICE: name} (FL v0.2), under a {@code T} key. */
+        public static final byte CHOICE_TYPE = 8;
 
         private Kind() {
         }
 
         public static boolean isDeclaration(byte kind) {
-            return kind >= WORD && kind <= ALIAS;
+            return (kind >= WORD && kind <= ALIAS) || kind == CHOICE_TYPE;
         }
     }
 

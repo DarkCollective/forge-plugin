@@ -84,7 +84,10 @@ public class FLParserDefinition implements ParserDefinition {
         if (t == FLElementTypes.META_BLOCK) return new FLMetaBlock(node);
         if (t == FLElementTypes.META_CLAUSE) return new FLMetaClause(node);
         if (t == FLElementTypes.PARAM_REF) return new FLParamRef(node);
-        return new FLPsiElement(node); // DOC_DECL, QUOTATION, LIST_LITERAL, USING_FORM
+        if (t == FLElementTypes.LOCAL_BIND) return new com.forge.fl.psi.FLLocal(node);
+        if (t == FLElementTypes.CHOICE_DECL) return new com.forge.fl.psi.FLChoiceType(node);
+        if (t == FLElementTypes.CHOICE_REF) return new com.forge.fl.psi.FLChoiceRef(node);
+        return new FLPsiElement(node); // DOC_DECL, QUOTATION, LIST_LITERAL, USING_FORM, CHOICE_OPTION
     }
 
     @NotNull

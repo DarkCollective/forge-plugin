@@ -33,6 +33,14 @@ public final class FLElementTypes {
     public static final IElementType META_CLAUSE = new FLElementType("META_CLAUSE");
     public static final IElementType ALIAS = new FLElementType("ALIAS");
     public static final IElementType PARAM_REF = new FLElementType("PARAM_REF");
+    /** {@code CHOICE: name option... ;} (FL v0.2, docs/LANGUAGE.md 5.12). */
+    public static final IElementType CHOICE_DECL = new FLElementType("CHOICE_DECL");
+    /** {@code option opt [help] ;} inside a CHOICE: block. */
+    public static final IElementType CHOICE_OPTION = new FLElementType("CHOICE_OPTION");
+    /** The type reference of {@code name:choice<type>} in a header (5.4). */
+    public static final IElementType CHOICE_REF = new FLElementType("CHOICE_REF");
+    /** {@code :> name} in a body (FL v0.2, 7.1): declares a local. */
+    public static final IElementType LOCAL_BIND = new FLElementType("LOCAL_BIND");
 
     private FLElementTypes() {
     }

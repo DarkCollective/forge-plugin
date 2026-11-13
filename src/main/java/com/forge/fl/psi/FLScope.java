@@ -36,6 +36,9 @@ public final class FLScope {
 
     private final Map<String, List<Decl>> byKey = new HashMap<>();
     private final List<Decl> all = new ArrayList<>();
+    /** Shared choice types (FL v0.2, 5.12): a namespace of their own, keyed like {@link #byKey}. */
+    private final Map<String, List<Decl>> typesByKey = new HashMap<>();
+    private final List<Decl> types = new ArrayList<>();
     private final List<int[]> inOffsets = new ArrayList<>(); // {end offset of the IN: form}
     private final List<String> inVocabs = new ArrayList<>();
     /** Per USING: form: {start offset} and its names, in file order. */
@@ -70,6 +73,14 @@ public final class FLScope {
                 s.declare(v, child);
                 String name = v.getName();
                 if (name != null) s.add(s.vocabAt(child.getTextRange().getStartOffset()), name + "!", v, child);
+            } else if (child instanceof FLChoiceType type) {
+                String name = type.getName();
+                if (name != null) {
+                    Decl d = new Decl(s.vocabAt(child.getTextRange().getStartOffset()), name, type,
+                            child.getTextRange().getStartOffset(), child.getTextRange().getEndOffset());
+                    s.types.add(d);
+                    s.typesByKey.computeIfAbsent(d.vocab() + '\0' + name, k -> new ArrayList<>()).add(d);
+                }
             } else if (child instanceof FLMetaBlock block) {
                 for (FLAlias alias : PsiTreeUtil.findChildrenOfType(block, FLAlias.class)) {
                     s.declare(alias, block);
@@ -121,6 +132,7 @@ public final class FLScope {
     public Set<String> vocabularies() {
         Set<String> out = new LinkedHashSet<>(inVocabs);
         for (Decl d : all) out.add(d.vocab());
+        for (Decl d : types) out.add(d.vocab());
         return out;
     }
 
@@ -133,6 +145,18 @@ public final class FLScope {
     @NotNull
     public List<Decl> all() {
         return all;
+    }
+
+    /** Choice types named {@code name} in {@code vocab}, in file order. */
+    @NotNull
+    public List<Decl> findType(String vocab, String name) {
+        return typesByKey.getOrDefault(vocab + '\0' + name, Collections.emptyList());
+    }
+
+    /** Every choice type declared in this file. */
+    @NotNull
+    public List<Decl> types() {
+        return types;
     }
 
     /**

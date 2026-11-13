@@ -48,7 +48,10 @@ public final class FLBuiltins {
     /** Bump when {@link #render} changes, so that already materialised directories are not reused. */
     private static final int RENDER_VERSION = 1;
 
-    /** One exported word. {@code kind} is {@code primitive} or {@code intrinsic}. */
+    /**
+     * One exported word. {@code kind} is {@code primitive} or {@code intrinsic} (TypeScript), or {@code prelude}
+     * for the FL words of the core prelude (FL v0.2, docs/LANGUAGE.md 13.8), which have no source file.
+     */
     public record Word(String vocab, String name, String kind, String effect, @Nullable String doc,
                        @Nullable String category, @Nullable String aliasOf) {
     }
@@ -100,7 +103,7 @@ public final class FLBuiltins {
             if (w.doc() != null && !w.doc().isBlank()) {
                 for (String line : w.doc().split("\\R", -1)) sb.append("\\ ").append(line).append('\n');
             }
-            sb.append("\\ [TypeScript ").append(w.kind());
+            sb.append(w.kind().equals("prelude") ? "\\ [FL prelude" : "\\ [TypeScript " + w.kind());
             if (w.category() != null) sb.append(", category ").append(w.category());
             if (w.aliasOf() != null) sb.append(", alias of ").append(w.aliasOf());
             sb.append("]\n");

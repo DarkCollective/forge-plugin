@@ -26,7 +26,6 @@ import static com.forge.fl.FLTokenTypes.*;
 public final class FLLightScan {
     public static final String DEFAULT_VOCAB = "user";
 
-    private static final TokenSet FORM_STARTS = TokenSet.create(COLON, IN_KW, USING_KW, META_KW, VOCAB_KW, PRIMITIVE_KW);
 
     private final CharSequence text;
     private final int[] starts;
@@ -77,7 +76,7 @@ public final class FLLightScan {
     }
 
     private boolean isFormStart(@Nullable IElementType t) {
-        return t != null && FORM_STARTS.contains(t);
+        return t != null && FLTokenTypes.FORM_STARTS.contains(t);
     }
 
     private void add(String key, byte kind, int offset, @Nullable String detail) {
@@ -109,8 +108,10 @@ public final class FLLightScan {
     private void run() {
         while (i < n) {
             IElementType t = types[i];
-            if (t == COLON) {
+            if (t == COLON || t == MEMO_KW) {
                 definition();
+            } else if (t == CHOICE_KW) {
+                choice();
             } else if (t == IN_KW || t == VOCAB_KW) {
                 i++;
                 if (type(i) == WORD_NAME) {
@@ -133,9 +134,33 @@ public final class FLLightScan {
             } else if (isLiteral(t) && (type(i + 1) == CONSTANT_KW || type(i + 1) == VARIABLE_KW)) {
                 constOrVar();
             } else {
-                if (t == WORD_NAME || t == QUALIFIED_NAME) use(i);
+                if (t == BIND_KW && type(i + 1) == WORD_NAME) i++; // :> name binds, it is no use
+                else if (t == WORD_NAME || t == QUALIFIED_NAME) use(i);
                 i++;
             }
+        }
+    }
+
+    /** {@code CHOICE: name option... ;}: one type declaration; the options are no uses. */
+    private void choice() {
+        i++; // CHOICE:
+        if (type(i) == WORD_NAME) {
+            markVocab();
+            add(FLIndex.typeKey(vocab, tokenText(i)), FLIndexEntry.Kind.CHOICE_TYPE, starts[i], null);
+            i++;
+        } else if (i < n && types[i] != SEMI && !isFormStart(types[i])) {
+            i++; // a bad name, as the parser skips it
+        }
+        while (i < n) {
+            IElementType t = types[i];
+            if (t == SEMI) {
+                i++;
+                return;
+            }
+            if (isFormStart(t)) return;
+            i++; // option clause or junk: up to its ';'
+            while (i < n && types[i] != SEMI && !isFormStart(types[i])) i++;
+            if (type(i) == SEMI) i++;
         }
     }
 
@@ -156,13 +181,14 @@ public final class FLLightScan {
     }
 
     private void definition() {
-        i++; // ':'
+        i++; // ':' or 'MEMO:'
         int nameTok = -1;
         IElementType t = type(i);
         if (t == WORD_NAME) {
             nameTok = i;
             i++;
-        } else if (t == QUALIFIED_NAME || (t != null && FLTokenTypes.KEYWORDS.contains(t) && t != COLON && t != SEMI)) {
+        } else if (t == QUALIFIED_NAME || (t != null && FLTokenTypes.KEYWORDS.contains(t) && !FLTokenTypes.DEFINERS.contains(t)
+                && t != SEMI)) {
             i++;
         }
         String detail = null;
@@ -172,10 +198,15 @@ public final class FLLightScan {
             while (i < n && types[i] != HDR_RPAREN) {
                 IElementType h = types[i];
                 if (h == HDR_PARAM_NAME) {
+                    int to = ends[i];
                     i++;
-                    if (type(i) == HDR_PARAM_REST) i++;
+                    while ((type(i) == HDR_PARAM_REST || type(i) == HDR_CHOICE_REF) && starts[i] == to) {
+                        if (types[i] == HDR_CHOICE_REF) use(i); // choice<type>: a use of the type name
+                        to = ends[i];
+                        i++;
+                    }
                 } else if (h == HDR_PARAM_REST || h == HDR_TYPE || h == HDR_ARROW || h == HDR_DOTS
-                        || h == HDR_OUTPUT || h == HDR_OTHER) {
+                        || h == HDR_OUTPUT || h == HDR_OTHER || h == HDR_CHOICE_REF) {
                     i++;
                 } else {
                     break;
@@ -193,7 +224,8 @@ public final class FLLightScan {
             i += 2;
         }
         while (i < n && types[i] != SEMI && !isFormStart(types[i])) {
-            if (types[i] == WORD_NAME || types[i] == QUALIFIED_NAME) use(i);
+            if (types[i] == BIND_KW && type(i + 1) == WORD_NAME) i++; // :> name binds a local
+            else if (types[i] == WORD_NAME || types[i] == QUALIFIED_NAME) use(i);
             i++;
         }
         if (type(i) == SEMI) i++;
@@ -228,7 +260,13 @@ public final class FLLightScan {
     private void clause() {
         String key = tokenText(i);
         i++;
+        if (key.equals("checks")) { // reserved: skipped whole, as the parser does
+            while (i < n && types[i] != SEMI && !isFormStart(types[i])) i++;
+            if (type(i) == SEMI) i++;
+            return;
+        }
         boolean paramName = key.equals("param");
+        int args = 0;
         while (i < n && types[i] != SEMI && !isFormStart(types[i])) {
             IElementType t = types[i];
             switch (key) {
@@ -241,9 +279,13 @@ public final class FLLightScan {
                 case "see-also" -> {
                     if (t == WORD_NAME || t == QUALIFIED_NAME) use(i);
                 }
-                default -> { // doc, category, version
+                case "inverse" -> {
+                    if ((t == WORD_NAME || t == QUALIFIED_NAME) && args == 0) use(i);
+                }
+                default -> { // doc, category, version, use-when, link, helper
                 }
             }
+            args++;
             i++;
         }
         if (type(i) == SEMI) i++;

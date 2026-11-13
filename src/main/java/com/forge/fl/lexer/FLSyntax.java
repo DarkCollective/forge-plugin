@@ -11,14 +11,23 @@ import java.util.regex.Pattern;
 public final class FLSyntax {
     /** Reserved words (spec 2.11): cannot be defined as words, constants, variables, aliases or parameters. */
     public static final Set<String> RESERVED = Set.of(
-            ":", ";", "IN:", "USING:", "META:", "VOCAB", "CONSTANT", "VARIABLE", "PRIMITIVE", "recurse", "true", "false");
+            ":", ";", "IN:", "USING:", "META:", "MEMO:", "CHOICE:", "VOCAB", "CONSTANT", "VARIABLE", "PRIMITIVE", "recurse",
+            "true", "false");
 
     /** Header type names (spec 5.4). */
     public static final Set<String> TYPE_NAMES = Set.of(
             "any", "bytes", "str", "int", "num", "number", "bool", "list", "quot", "record", "file", "regex", "charset");
 
-    /** META: clause words (spec 5.9). */
-    public static final Set<String> META_CLAUSES = Set.of("doc", "category", "version", "param", "alias", "see-also");
+    /**
+     * META: clause words (spec 5.9). {@code use-when}, {@code link}, {@code inverse} and {@code helper} are FL v0.2;
+     * {@code checks} is reserved (any use is E_META) but still a clause word, so that it is reported as reserved.
+     * None of them is reserved outside a META: block.
+     */
+    public static final Set<String> META_CLAUSES = Set.of("doc", "category", "version", "param", "alias", "see-also",
+            "use-when", "link", "inverse", "helper", "checks");
+
+    /** The clause keyword of a CHOICE: block (spec 5.12); an ordinary name elsewhere. */
+    public static final String CHOICE_OPTION = "option";
 
     private static final String SYMBOLS = "!$%&*+,./<=>?@^|~";
     private static final int MAX_WORD_NAME = 128;

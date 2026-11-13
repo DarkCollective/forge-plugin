@@ -2,6 +2,8 @@
 package com.forge.fl.search;
 
 import com.forge.fl.index.FLIndexLookup;
+import com.forge.fl.psi.FLChoiceRef;
+import com.forge.fl.psi.FLChoiceType;
 import com.forge.fl.psi.FLNamedElement;
 import com.forge.fl.psi.FLParameter;
 import com.forge.fl.psi.FLVariable;
@@ -75,6 +77,14 @@ public class FLReferencesSearcher extends QueryExecutorBase<PsiReference, Refere
             }
         }
         for (PsiFile file : files) {
+            if (target instanceof FLChoiceType) { // choice types are used only by header choice<...> references
+                for (FLChoiceRef ref : PsiTreeUtil.findChildrenOfType(file, FLChoiceRef.class)) {
+                    if (!names.contains(ref.getBareName()) || !PsiSearchScopeUtil.isInScope(scope, ref)) continue;
+                    PsiReference reference = ref.getReference();
+                    if (reference.isReferenceTo(target) && !consumer.process(reference)) return;
+                }
+                continue;
+            }
             for (FLWordRef ref : PsiTreeUtil.findChildrenOfType(file, FLWordRef.class)) {
                 if (!names.contains(ref.getBareName()) || !PsiSearchScopeUtil.isInScope(scope, ref)) continue;
                 PsiReference reference = ref.getReference();

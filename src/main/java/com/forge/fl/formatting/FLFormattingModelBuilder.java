@@ -32,6 +32,12 @@ public final class FLFormattingModelBuilder implements FormattingModelBuilder {
                 new FLBlock(context.getNode(), null, Indent.getNoneIndent()), context.getCodeStyleSettings());
     }
 
+    /**
+     * One level, passed on to the children even when the block does not start a line: a quotation opened at the end
+     * of a body line indents its contents one level deeper than that line.
+     */
+    private static final Indent ENFORCED = Indent.getIndent(Indent.Type.NORMAL, false, true);
+
     private static final class FLBlock extends AbstractBlock {
         private final Indent indent;
         FLBlock(@NotNull ASTNode node, @Nullable Wrap wrap, @NotNull Indent indent) {
@@ -48,9 +54,16 @@ public final class FLFormattingModelBuilder implements FormattingModelBuilder {
                 IElementType type = child.getElementType();
                 Indent childIndent = Indent.getNoneIndent();
                 if (myNode.getElementType() == FLElementTypes.DEFINITION && inDefinitionBody) {
-                    childIndent = Indent.getNormalIndent();
-                } else if (myNode.getElementType() == FLElementTypes.META_BLOCK
-                        && type == FLElementTypes.META_CLAUSE) {
+                    childIndent = ENFORCED;
+                } else if (isGroup(myNode.getElementType()) && child != myNode.getFirstChildNode()
+                        && type != RBRACKET && type != RBRACE) {
+                    // a line inside a multi-line [ ] or { } is one level deeper than the line that opens it;
+                    // the closing bracket lines up with that line
+                    childIndent = ENFORCED;
+                } else if (myNode.getElementType() == FLElementTypes.USING_FORM && child != myNode.getFirstChildNode()) {
+                    childIndent = Indent.getNormalIndent(); // the continuation lines of a long USING:
+                } else if ((myNode.getElementType() == FLElementTypes.META_BLOCK && type == FLElementTypes.META_CLAUSE)
+                        || (myNode.getElementType() == FLElementTypes.CHOICE_DECL && type == FLElementTypes.CHOICE_OPTION)) {
                     childIndent = Indent.getNormalIndent();
                 }
                 result.add(new FLBlock(child, null, childIndent));
@@ -74,26 +87,34 @@ public final class FLFormattingModelBuilder implements FormattingModelBuilder {
             IElementType right = ((ASTBlock) child2).getNode().getElementType();
 
             if (parentType == FLElementTypes.FILE) {
-                if (isComment(right)) {
-                    return nextNonComment(((ASTBlock) child2).getNode()) == FLElementTypes.DEFINITION
-                            && !isComment(left) ? blankLine() : lineBreak();
+                // Between top-level forms exactly one blank line. A comment run directly above a definition or a
+                // CHOICE: block is its documentation: one blank line before the run, none after it. Elsewhere
+                // comments keep at most one blank line around them (section headings, licence header).
+                if (isComment(right) && !isComment(left)) {
+                    return isDocumented(nextNonComment(((ASTBlock) child2).getNode())) ? blankLine() : lineBreakKeepOne();
                 }
-                if (isComment(left)) return lineBreak();
+                if (isComment(left)) return lineBreakKeepOne();
+                // a run of one-line forms (CONSTANT, VARIABLE, PRIMITIVE, short definitions) may stay together
+                if (isOneLine(((ASTBlock) child1).getNode()) && isOneLine(((ASTBlock) child2).getNode())) {
+                    return lineBreakKeepOne();
+                }
                 return blankLine();
             }
-            if (left == LINE_COMMENT || right == LINE_COMMENT) return lineBreak();
+            if (left == LINE_COMMENT) return lineBreak();
+            // an end-of-line comment stays on its line, aligned as written (tables of data); one on a line of its
+            // own stays there
+            if (right == LINE_COMMENT) return Spacing.createSpacing(1, Integer.MAX_VALUE, 0, true, 0);
             if (parentType == FLElementTypes.DEFINITION) {
                 if (left == FLElementTypes.HEADER) {
                     return right == SEMI ? space() : preserveLineBreak();
                 }
                 if (left == FLElementTypes.DOC_DECL || right == FLElementTypes.DOC_DECL) return lineBreak();
             }
-            if (parentType == FLElementTypes.META_BLOCK) {
-                if (left == META_KW) return space();
+            if (parentType == FLElementTypes.META_BLOCK || parentType == FLElementTypes.CHOICE_DECL) {
+                if (left == META_KW || left == CHOICE_KW) return space();
                 return lineBreak();
             }
-            if (parentType == FLElementTypes.PARAMETER
-                    && left == HDR_PARAM_NAME && right == HDR_PARAM_REST) return noSpace();
+            if (parentType == FLElementTypes.PARAMETER) return noSpace(); // name:type, name:choice<type>=x is one item
             return space();
         }
 
@@ -127,6 +148,29 @@ public final class FLFormattingModelBuilder implements FormattingModelBuilder {
 
         private static Spacing lineBreak() {
             return Spacing.createSpacing(0, 0, 1, true, 0);
+        }
+
+        /** A line break, keeping at most one blank line the author wrote. */
+        private static Spacing lineBreakKeepOne() {
+            return Spacing.createSpacing(0, 0, 1, true, 1);
+        }
+
+        /** A declaration or definition written on one line; those may form a run without blank lines. */
+        private static boolean isOneLine(@Nullable ASTNode node) {
+            if (node == null) return false;
+            IElementType type = node.getElementType();
+            boolean decl = type == FLElementTypes.CONSTANT_DECL || type == FLElementTypes.VARIABLE_DECL
+                    || type == FLElementTypes.PRIMITIVE_DECL || type == FLElementTypes.DEFINITION;
+            return decl && node.getText().indexOf('\n') < 0;
+        }
+
+        private static boolean isGroup(IElementType type) {
+            return type == FLElementTypes.QUOTATION || type == FLElementTypes.LIST_LITERAL;
+        }
+
+        /** Forms whose comment run directly above them is their documentation. */
+        private static boolean isDocumented(@Nullable IElementType type) {
+            return type == FLElementTypes.DEFINITION || type == FLElementTypes.CHOICE_DECL;
         }
 
         private static Spacing preserveLineBreak() {

@@ -31,7 +31,8 @@ public class FLBuiltinsTest extends FLMultiFileTestBase {
             String key = w.vocab() + " " + w.name();
             assertTrue("sorted: " + key, previous.compareTo(key) < 0);
             assertTrue("unique: " + key, seen.add(key));
-            assertTrue(key, w.kind().equals("primitive") || w.kind().equals("intrinsic"));
+            assertTrue(key, w.kind().equals("primitive") || w.kind().equals("intrinsic")
+                    || (w.kind().equals("prelude") && w.vocab().equals("core")));
             assertTrue(key, w.effect().startsWith("(") && w.effect().endsWith(")"));
             previous = key;
         }

@@ -20,7 +20,7 @@ import java.util.List;
  *
  * <p>Unqualified name N at a position with current vocabulary C and imports U (6.2):
  * <ol>
- *   <li>a parameter of the enclosing colon definition;</li>
+ *   <li>a local: a {@code :>} binding visible at the use (7.1), else a parameter of the enclosing definition;</li>
  *   <li>C defines N (public or private): the last declaration in this file that ends before the enclosing form,
  *       else a declaration in another file that declares into C;</li>
  *   <li>N public and defined by exactly one vocabulary of U: that word; by several: ambiguous (all returned, in
@@ -104,12 +104,9 @@ public final class FLResolver {
                 : parent instanceof FLMetaClause ? Role.SEE_ALSO : Role.NORMAL;
         if (role != Role.NORMAL) return single(definedIn(c, current, name, true));
 
-        // 1. locals
-        FLDefinition def = PsiTreeUtil.getParentOfType(ref, FLDefinition.class);
-        if (def != null) {
-            FLParameter p = def.findParameter(name);
-            if (p != null) return Collections.singletonList(p);
-        }
+        // 1. locals: mid-body :> bindings (innermost first), then the header
+        FLNamedElement local = findLocal(ref, name);
+        if (local != null) return Collections.singletonList(local);
         // 2. the current vocabulary
         PsiElement own = definedIn(c, current, name, false);
         if (own != null) return Collections.singletonList(own);
@@ -128,6 +125,116 @@ public final class FLResolver {
         if (core != null) return Collections.singletonList(core);
         // 5. nothing visible: a forward reference in this file is the best guess
         return single(FLScope.pick(c.scope.find(current, name), c.formStart));
+    }
+
+    /**
+     * The local named {@code name} visible at {@code at} (docs/LANGUAGE.md 7, 7.1): a {@code :>} binding whose body
+     * encloses {@code at} and that comes before it, innermost body first and, in one body, the nearest binding;
+     * else a named input of the enclosing definition's header. Null when there is none.
+     */
+    @Nullable
+    public static FLNamedElement findLocal(@NotNull PsiElement at, @NotNull String name) {
+        int offset = at.getTextRange().getStartOffset();
+        for (PsiElement owner = at.getParent(); owner != null && !(owner instanceof PsiFile); owner = owner.getParent()) {
+            boolean body = owner instanceof FLDefinition || owner.getNode().getElementType() == FLElementTypes.QUOTATION;
+            if (!body) continue;
+            FLLocal best = null;
+            for (PsiElement c = owner.getFirstChild(); c != null; c = c.getNextSibling()) {
+                if (c.getTextRange().getStartOffset() >= offset) break;
+                if (c instanceof FLLocal l && name.equals(l.getName()) && l.isVisibleAt(offset)) best = l;
+            }
+            if (best != null) return best;
+            if (owner instanceof FLDefinition def) return def.findParameter(name);
+        }
+        return null;
+    }
+
+    /** Every local visible at {@code at}, nearest first, each name once (for completion). */
+    @NotNull
+    public static List<FLNamedElement> visibleLocals(@NotNull PsiElement at) {
+        java.util.Map<String, FLNamedElement> out = new java.util.LinkedHashMap<>();
+        int offset = at.getTextRange().getStartOffset();
+        for (PsiElement owner = at.getParent(); owner != null && !(owner instanceof PsiFile); owner = owner.getParent()) {
+            boolean body = owner instanceof FLDefinition || owner.getNode().getElementType() == FLElementTypes.QUOTATION;
+            if (!body) continue;
+            List<FLLocal> here = new ArrayList<>();
+            for (PsiElement c = owner.getFirstChild(); c != null; c = c.getNextSibling()) {
+                if (c.getTextRange().getStartOffset() >= offset) break;
+                if (c instanceof FLLocal l && l.getName() != null && l.isVisibleAt(offset)) here.add(0, l);
+            }
+            for (FLLocal l : here) out.putIfAbsent(l.getName(), l);
+            if (owner instanceof FLDefinition def) {
+                for (FLParameter p : def.getParameters()) {
+                    if (p.getName() != null) out.putIfAbsent(p.getName(), p);
+                }
+                break;
+            }
+        }
+        return new ArrayList<>(out.values());
+    }
+
+    /**
+     * A shared choice type (docs/LANGUAGE.md 6.8): qualified {@code v:name} through exactly {@code v} (a private
+     * name only from {@code v} itself); unqualified the current vocabulary, then the public types of the imports
+     * ({@code core} has none). Null when unresolved or ambiguous.
+     */
+    @Nullable
+    public static FLChoiceType resolveChoice(@NotNull FLChoiceRef ref) {
+        List<FLChoiceType> all = resolveChoiceAll(ref);
+        return all.size() == 1 ? all.get(0) : null;
+    }
+
+    /** As {@link #resolveChoice}, but every candidate of an ambiguous name, in USING: order. */
+    @NotNull
+    public static List<FLChoiceType> resolveChoiceAll(@NotNull FLChoiceRef ref) {
+        if (ref.getContainingFile() == null) return Collections.emptyList();
+        Context c = new Context(ref.getContainingFile(), topStart(ref));
+        int pos = ref.getTextRange().getStartOffset();
+        String current = c.scope.vocabAt(pos);
+        String name = ref.getBareName();
+        String qualifier = ref.getVocab();
+        if (qualifier != null) {
+            if (isPrivateName(name) && !qualifier.equals(current)) return Collections.emptyList();
+            FLChoiceType t = typeIn(c, qualifier, name);
+            return t == null ? Collections.emptyList() : Collections.singletonList(t);
+        }
+        FLChoiceType own = typeIn(c, current, name);
+        if (own != null) return Collections.singletonList(own);
+        List<FLChoiceType> out = new ArrayList<>();
+        if (!isPrivateName(name)) {
+            for (String u : c.scope.usingAt(pos)) {
+                if (u.equals(current)) continue;
+                FLChoiceType t = typeIn(c, u, name);
+                if (t != null) out.add(t);
+            }
+        }
+        return out;
+    }
+
+    /** Whether any vocabulary declares a choice type {@code vocab:name} (this file or the index). */
+    public static boolean typeDeclared(@NotNull PsiFile file, @NotNull String vocab, @NotNull String name) {
+        return !FLScope.of(file).findType(vocab, name).isEmpty()
+                || !FLIndexLookup.typeDeclarations(file.getProject(), vocab, name).isEmpty();
+    }
+
+    @Nullable
+    private static FLChoiceType typeIn(Context c, String vocab, String name) {
+        FLNamedElement earlier = FLScope.pickEarlier(c.scope.findType(vocab, name), c.formStart);
+        if (earlier instanceof FLChoiceType t) return t;
+        for (FLIndexLookup.Hit hit : FLIndexLookup.typeDeclarations(c.project, vocab, name)) {
+            if (hit.file().equals(c.self)) continue;
+            List<FLIndexEntry> entries = hit.entries();
+            for (int k = entries.size() - 1; k >= 0; k--) {
+                if (FLIndexLookup.element(c.project, hit.file(), entries.get(k)) instanceof FLChoiceType t) return t;
+            }
+        }
+        return null;
+    }
+
+    private static int topStart(PsiElement e) {
+        PsiElement top = e;
+        while (top.getParent() != null && !(top.getParent() instanceof PsiFile)) top = top.getParent();
+        return top.getTextRange().getStartOffset();
     }
 
     private static List<PsiElement> single(@Nullable PsiElement e) {

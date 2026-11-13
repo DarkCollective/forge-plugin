@@ -11,16 +11,15 @@ import com.intellij.psi.TokenType;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static com.forge.fl.FLTokenTypes.*;
 
 /**
- * Recursive-descent parser for FL (docs/LANGUAGE.md section 5.1). Every loop consumes at least one token per
+ * Recursive-descent parser for FL v0.2 (docs/LANGUAGE.md section 5.1). Every loop consumes at least one token per
  * iteration or exits, so the parser always consumes the whole file. Errors become {@code PsiErrorElement}s.
  */
 public class FLParser implements PsiParser {
-    /** Tokens that start a top-level form; they end an unterminated definition or META: block. */
-    private static final TokenSet FORM_STARTS = TokenSet.create(COLON, IN_KW, USING_KW, META_KW, VOCAB_KW, PRIMITIVE_KW);
 
     private PsiBuilder b;
 
@@ -45,6 +44,11 @@ public class FLParser implements PsiParser {
         return b.getTokenType();
     }
 
+    private int textLength() {
+        String text = b.getTokenText();
+        return text == null ? 0 : text.length();
+    }
+
     private void errorAndAdvance(String message) {
         PsiBuilder.Marker m = b.mark();
         b.advanceLexer();
@@ -64,8 +68,10 @@ public class FLParser implements PsiParser {
 
     private void topLevel() {
         IElementType t = tt();
-        if (t == COLON) {
+        if (t == COLON || t == MEMO_KW) {
             definition();
+        } else if (t == CHOICE_KW) {
+            choice();
         } else if (t == IN_KW) {
             nameForm(FLElementTypes.IN_FORM, "vocabulary name expected");
         } else if (t == VOCAB_KW) {
@@ -123,10 +129,11 @@ public class FLParser implements PsiParser {
 
     private void definition() {
         PsiBuilder.Marker m = b.mark();
-        b.advanceLexer(); // ':'
+        b.advanceLexer(); // ':' or 'MEMO:'
         if (tt() == WORD_NAME) {
             b.advanceLexer();
-        } else if (tt() == QUALIFIED_NAME || (tt() != null && KEYWORDS.contains(tt()) && tt() != COLON && tt() != SEMI)) {
+        } else if (tt() == QUALIFIED_NAME || (tt() != null && KEYWORDS.contains(tt()) && !DEFINERS.contains(tt())
+                && tt() != SEMI)) {
             errorAndAdvance("a definition name must be an unreserved, unqualified word (E_NAME)");
         } else {
             nameMissing("word name expected");
@@ -164,11 +171,22 @@ public class FLParser implements PsiParser {
             IElementType t = tt();
             if (t == HDR_PARAM_NAME) {
                 PsiBuilder.Marker p = b.mark();
+                int to = b.getCurrentOffset() + textLength();
                 b.advanceLexer();
-                if (tt() == HDR_PARAM_REST) b.advanceLexer();
+                // the rest of the item: ':type...' or ':choice<' TYPE '>...' (FL v0.2), all glued to the name
+                while ((tt() == HDR_PARAM_REST || tt() == HDR_CHOICE_REF) && b.getCurrentOffset() == to) {
+                    to = b.getCurrentOffset() + textLength();
+                    if (tt() == HDR_CHOICE_REF) {
+                        PsiBuilder.Marker r = b.mark();
+                        b.advanceLexer();
+                        r.done(FLElementTypes.CHOICE_REF);
+                    } else {
+                        b.advanceLexer();
+                    }
+                }
                 p.done(FLElementTypes.PARAMETER);
             } else if (t == HDR_PARAM_REST || t == HDR_TYPE || t == HDR_ARROW || t == HDR_DOTS || t == HDR_OUTPUT
-                    || t == HDR_OTHER) {
+                    || t == HDR_OTHER || t == HDR_CHOICE_REF) {
                 b.advanceLexer();
             } else {
                 break; // not a header token: the header is unterminated
@@ -206,6 +224,8 @@ public class FLParser implements PsiParser {
         } else if (t == RBRACKET || t == RBRACE) {
             if (!topLevel && depth > 0) return false;
             errorAndAdvance("unbalanced '" + (t == RBRACKET ? "]" : "}") + "' (E_SYNTAX)");
+        } else if (t == BIND_KW) {
+            bind();
         } else if (isLiteral(t) || t == RECURSE_KW) {
             b.advanceLexer();
         } else if (t == TokenType.BAD_CHARACTER) {
@@ -244,10 +264,92 @@ public class FLParser implements PsiParser {
         m.done(type);
     }
 
+    /**
+     * {@code :> name} (docs/LANGUAGE.md 7.1). A token after {@code :>} that is not a word is E_SYNTAX and is left
+     * for the body; a reserved word or keyword is E_NAME. Where {@code :>} may appear is checked by the diagnostics.
+     */
+    private void bind() {
+        PsiBuilder.Marker m = b.mark();
+        b.advanceLexer(); // ':>'
+        IElementType t = tt();
+        if (t == WORD_NAME) {
+            b.advanceLexer();
+        } else if (t != null && (KEYWORDS.contains(t) || t == VOCAB_KW) && !FORM_STARTS.contains(t) && t != SEMI) {
+            errorAndAdvance("':>' needs an unreserved word name (E_NAME)");
+        } else {
+            b.error(t == SEMI || (t != null && FORM_STARTS.contains(t)) ? "':>' needs a word name (E_NAME)"
+                    : "':>' must be followed by one word name (E_SYNTAX)");
+        }
+        m.done(FLElementTypes.LOCAL_BIND);
+    }
+
     private void wordRef() {
         PsiBuilder.Marker m = b.mark();
         b.advanceLexer();
         m.done(FLElementTypes.WORD_REF);
+    }
+
+    // ---- CHOICE: -----------------------------------------------------------------------------------------
+
+    /** {@code CHOICE: name { option opt [help] ; } ;} (docs/LANGUAGE.md 5.12): the shape of META:. */
+    private void choice() {
+        PsiBuilder.Marker m = b.mark();
+        b.advanceLexer(); // CHOICE:
+        if (tt() == WORD_NAME) b.advanceLexer();
+        else if (tt() == QUALIFIED_NAME || (tt() != null && KEYWORDS.contains(tt()) && tt() != SEMI && !FORM_STARTS.contains(tt())))
+            errorAndAdvance("a choice type name must be an unreserved, unqualified word (E_NAME)");
+        else nameMissing("choice type name expected");
+        int options = 0;
+        while (!b.eof()) {
+            IElementType t = tt();
+            if (t == SEMI) {
+                if (options == 0) {
+                    PsiBuilder.Marker e = b.mark();
+                    b.advanceLexer();
+                    e.error("a CHOICE: block needs at least one option (E_META)");
+                } else {
+                    b.advanceLexer();
+                }
+                m.done(FLElementTypes.CHOICE_DECL);
+                return;
+            }
+            if (FORM_STARTS.contains(t)) break;
+            if (t == WORD_NAME && FLSyntax.CHOICE_OPTION.equals(b.getTokenText())) {
+                option();
+                options++;
+            } else {
+                PsiBuilder.Marker c = b.mark();
+                b.advanceLexer();
+                skipToClauseEnd();
+                c.error("'option' or the closing ';' expected (E_SYNTAX)");
+            }
+        }
+        b.error("';' expected (E_SYNTAX)");
+        m.done(FLElementTypes.CHOICE_DECL);
+    }
+
+    private void option() {
+        PsiBuilder.Marker c = b.mark();
+        b.advanceLexer(); // option
+        int args = 0;
+        while (!b.eof() && tt() != SEMI && !FORM_STARTS.contains(tt())) {
+            IElementType t = tt();
+            boolean ok = args == 0 ? t == WORD_NAME || t == STRING || (t == NUMBER && isInteger(b.getTokenText()))
+                    : args == 1 && t == STRING;
+            if (ok) b.advanceLexer();
+            else errorAndAdvance(args == 0 ? "option expected: a word, an integer or a string (E_META)"
+                    : args == 1 ? "help text expected: a string (E_META)" : "an option takes at most two arguments (E_META)");
+            args++;
+        }
+        if (args == 0) b.error("option expected (E_META)");
+        if (tt() == SEMI) b.advanceLexer();
+        else b.error("';' expected (E_SYNTAX)");
+        c.done(FLElementTypes.CHOICE_OPTION);
+    }
+
+    private static boolean isInteger(@Nullable String text) {
+        return text != null && !text.contains(".") && (text.contains("0x") || text.contains("0b")
+                || (!text.contains("e") && !text.contains("E")));
     }
 
     // ---- META: -------------------------------------------------------------------------------------------
@@ -289,15 +391,30 @@ public class FLParser implements PsiParser {
         PsiBuilder.Marker c = b.mark();
         String key = b.getTokenText();
         b.advanceLexer();
+        if ("checks".equals(key)) { // reserved (5.9): an error whatever follows
+            skipToClauseEnd();
+            c.error("'checks' is reserved for a later release (E_META)");
+            return;
+        }
         int args = 0;
         boolean paramName = "param".equals(key);
         while (!b.eof() && tt() != SEMI && !FORM_STARTS.contains(tt())) {
             IElementType t = tt();
             switch (key == null ? "" : key) {
-                case "doc", "category", "version" -> {
-                    if (t == STRING) b.advanceLexer();
-                    else errorAndAdvance("string expected (E_META)");
+                case "doc", "category", "version", "use-when" -> {
+                    if (t == STRING && args == 0) b.advanceLexer();
+                    else errorAndAdvance(t == STRING ? "'" + key + "' takes one string (E_META)" : "string expected (E_META)");
                 }
+                case "link" -> {
+                    if (t == STRING && args < 2) b.advanceLexer();
+                    else errorAndAdvance(t == STRING ? "'link' takes a URL and an optional label (E_META)"
+                            : "string expected (E_META)");
+                }
+                case "inverse" -> {
+                    if ((t == WORD_NAME || t == QUALIFIED_NAME) && args == 0) wordRef();
+                    else errorAndAdvance(args == 0 ? "word name expected (E_META)" : "'inverse' takes one name (E_META)");
+                }
+                case "helper" -> errorAndAdvance("'helper' takes no arguments (E_META)");
                 case "param" -> {
                     if (paramName && t == WORD_NAME) {
                         PsiBuilder.Marker r = b.mark();
@@ -326,7 +443,7 @@ public class FLParser implements PsiParser {
             }
             args++;
         }
-        if (args == 0) b.error("argument expected (E_META)");
+        if (args == 0 && !"helper".equals(key)) b.error("argument expected (E_META)");
         if (tt() == SEMI) b.advanceLexer();
         else b.error("';' expected (E_SYNTAX)");
         c.done(FLElementTypes.META_CLAUSE);

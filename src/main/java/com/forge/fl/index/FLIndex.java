@@ -32,13 +32,15 @@ import java.util.List;
  *       variables (both {@code n} and {@code n!}), primitives and aliases, private ones included;</li>
  *   <li>{@code U<name>} uses of a word by bare name (any {@code vocab:} prefix removed; a use of
  *       {@code counter!} is keyed {@code counter!});</li>
- *   <li>{@code V<vocab>} the file declares into or switches to the vocabulary.</li>
+ *   <li>{@code V<vocab>} the file declares into or switches to the vocabulary;</li>
+ *   <li>{@code T<vocab>:<name>} declarations of the shared choice type {@code name} (FL v0.2, {@code CHOICE:});
+ *       types have a namespace of their own. Their uses in headers ({@code choice<name>}) are {@code U} keys.</li>
  * </ul>
  * Bump {@link #VERSION} whenever the keys, the values or the scanning rules change.
  */
 public final class FLIndex extends FileBasedIndexExtension<String, List<FLIndexEntry>> {
     public static final ID<String, List<FLIndexEntry>> NAME = ID.create("com.forge.fl.index");
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     public static String declKey(String vocab, String name) {
         return "D" + vocab + ':' + name;
@@ -46,6 +48,10 @@ public final class FLIndex extends FileBasedIndexExtension<String, List<FLIndexE
 
     public static String declVocabPrefix(String vocab) {
         return "D" + vocab + ':';
+    }
+
+    public static String typeKey(String vocab, String name) {
+        return "T" + vocab + ':' + name;
     }
 
     public static String usageKey(String bareName) {

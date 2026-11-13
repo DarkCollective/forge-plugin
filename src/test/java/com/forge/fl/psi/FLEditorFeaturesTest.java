@@ -22,9 +22,9 @@ public class FLEditorFeaturesTest extends FLTestBase {
     public void testCompletionOffersKeywordsDeclarationsAndParameters() {
         List<String> items = complete(": helper ( -- ) ;\n0 VARIABLE counter\n: f ( amount:int -- ) <caret> ;\n");
         assertTrue(items.toString(), items.containsAll(List.of("recurse", "IN:", "helper", "counter", "counter!", "amount", "f")));
-        // core words are real now (phase 2); words that are not in core are still not invented
+        // core words are real now (phase 2); words that are not in core are still not invented (emit is core in v0.2)
         assertTrue(items.toString(), items.containsAll(List.of("dup", "swap")));
-        for (String bad : new String[]{"else", "then", "emit"}) assertFalse(bad, items.contains(bad));
+        for (String bad : new String[]{"else", "then", "begin"}) assertFalse(bad, items.contains(bad));
     }
 
     public void testParametersOfOtherDefinitionsAreNotOffered() {

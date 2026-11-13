@@ -67,7 +67,7 @@ public final class FLDocInfo {
     /** For a built-in word: {@code TypeScript primitive} or {@code TypeScript intrinsic}. */
     @Nullable public String builtinKind;
 
-    private static final Pattern MARKER = Pattern.compile("^\\[TypeScript (primitive|intrinsic)(.*)]$");
+    private static final Pattern MARKER = Pattern.compile("^\\[(TypeScript primitive|TypeScript intrinsic|FL prelude)(.*)]$");
 
     private FLDocInfo() {
     }
@@ -291,7 +291,7 @@ public final class FLDocInfo {
             Matcher m = MARKER.matcher(lines.get(lines.size() - 1).trim());
             if (m.matches()) {
                 lines.remove(lines.size() - 1);
-                builtinKind = "TypeScript " + m.group(1);
+                builtinKind = m.group(1);
                 String rest = m.group(2);
                 int aliasAt = rest.indexOf(", alias of ");
                 if (aliasAt >= 0) {

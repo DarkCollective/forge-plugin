@@ -56,6 +56,19 @@ public final class FLElementFactory {
         return leaf(project, ": x ( ", name, ":int -- ) ;", FLTokenTypes.HDR_PARAM_NAME);
     }
 
+    public static PsiElement createLocalName(Project project, String name) {
+        return leaf(project, ": x ( -- ) 0 :> ", name, " ;", FLTokenTypes.WORD_NAME);
+    }
+
+    public static PsiElement createChoiceTypeName(Project project, String name) {
+        return leaf(project, "CHOICE: ", name, " option a ; ;", FLTokenTypes.WORD_NAME);
+    }
+
+    /** The type leaf of {@code p:choice<text>} ({@code name} or {@code vocab:name}). */
+    public static PsiElement createChoiceRefLeaf(Project project, String text) {
+        return leaf(project, ": x ( s:str p:choice<", text, "> -- ) ;", FLTokenTypes.HDR_CHOICE_REF);
+    }
+
     /** The name leaf of a word reference ({@code name} or {@code vocab:name}). */
     public static PsiElement createWordRefLeaf(Project project, String text) {
         return leaf(project, ": x ( -- ) ", text, " ;", FLTokenTypes.WORD_NAME, FLTokenTypes.QUALIFIED_NAME);

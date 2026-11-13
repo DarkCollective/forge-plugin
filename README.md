@@ -1,16 +1,27 @@
 # Forge FL IntelliJ Plugin
 
-This is a starter IntelliJ plugin for the FL language described in `docs/LANGUAGE.md`.
+This is an IntelliJ plugin for the FL language, **v0.2**, described in `docs/LANGUAGE.md` of the Forge repository
+(its Appendix A lists what v0.2 added). The house formatting style is [docs/FL-STYLE.md](docs/FL-STYLE.md); the
+formatter follows it and a test keeps the two in agreement. Running and debugging FL from the IDE is researched
+in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
 
 ## Features
 
-- `.fl` / `.fth` file type support, with a lexer and parser that follow `docs/LANGUAGE.md` sections 2 and 5
+- `.fl` / `.fth` file type support, with a lexer and parser that follow `docs/LANGUAGE.md` sections 2 and 5,
+  including the v0.2 forms: `MEMO:` definitions, `CHOICE:` blocks with `option` clauses, `:>` mid-body locals,
+  `name:choice<type>` header types, and the `META:` clauses `use-when`, `link`, `inverse`, `helper` (and the
+  reserved `checks`)
 - syntax highlighting, including stack-effect headers and parameters
-- code formatting for top-level forms, definition bodies, quotations/lists and `META:` clauses; indentation follows
-  the IntelliJ code-style settings, and extra trailing blank lines are removed
+- code formatting in the style of [docs/FL-STYLE.md](docs/FL-STYLE.md): top-level forms, definition bodies,
+  multi-line quotations/lists, `META:` and `CHOICE:` blocks, end-of-line comments; the default indent is two
+  spaces (*Settings | Editor | Code Style | FL*), and extra trailing blank lines are removed
 - the “Move META block next to definition” intention for relocating a block to its resolved colon word
 - an enabled-by-default, Code Cleanup-compatible inspection for misplaced `META:` blocks; in the Reformat File
   dialog, enable **Code cleanup** to apply its move fix together with the formatter
+- `:>` locals resolve, rename and highlight like parameters, scoped to their body or quotation (7.1);
+  `choice<type>` resolves to its `CHOICE:` block (6.8: current vocabulary, then imports; `vocab:type`), with
+  completion, go to definition, find usages and rename. Choice types have their own namespace
+- `link` URLs in `META:` blocks are web references (Ctrl-click opens them)
 - name resolution as in `docs/LANGUAGE.md` section 6, across files and into the built-in words: parameter, current
   vocabulary (`IN:`), imports (`USING:`, an ambiguous name is a poly-variant reference with the candidates in
   `USING:` order), then `core`; qualified `vocab:name` (a private `_name` only from its own vocabulary); `META:`
@@ -26,10 +37,17 @@ This is a starter IntelliJ plugin for the FL language described in `docs/LANGUAG
   its own body), E_NO_VOCAB (qualified names and `USING:`), E_AMBIGUOUS (with a quick fix per candidate that writes
   `vocab:name`), E_PRIVATE, E_REDEFINED (words, constants, variables and `n!`, aliases), E_NAME, E_HEADER (no header,
   no `--`, duplicate, reserved or malformed parameter name), E_META (undefined or later target, private target,
-  unknown clause, `param` that is not a parameter other than the first input). Errors are an annotator; the weak
+  unknown clause, `param` that is not a parameter other than the first input, `checks`, `use-when` text rules,
+  `link` URL grammar, duplicates and the 8-link cap, `inverse` outside the current vocabulary, private or undefined),
+  and for v0.2: `exit` outside a body or a quotation passed to if/when/unless/while/loop (E_SYNTAX), `:>` outside a
+  definition or inside `{ }` (E_SYNTAX), a duplicate local (E_REDEFINED), a `MEMO:` header other than `( -- T )`
+  (E_HEADER), `recurse` in a `MEMO:` body, a `MEMO:` body that uses a variable, `.`, `.s` or a session word
+  directly (E_FORBIDDEN), `choice<…>` that does not resolve or is ambiguous, a default that is not one of the
+  type's options, duplicate or over-long options, a `CHOICE:` redefined in the file. Errors are an annotator; the weak
   warnings E_TOPLEVEL / `VOCAB` in a file and W_SHADOW are two inspections that can be switched off. Not checked:
   types, constraints and defaults of headers, stack effects, repeated `doc`/`category`/`version`, string lengths,
-  alias collisions with words of other files, `IN: core`, `PRIMITIVE` registry checks
+  alias collisions with words of other files, `IN: core`, `PRIMITIVE` registry checks, `MEMO:` purity through
+  callees and effect labels (+async, +random, +time), `emit` outside a collector (a run-time rule)
 - quick documentation (qualified name, kind, effect, doc, category, version, parameters with META help, aliases,
   see-also, constant/variable value; built-ins from their comment lines), also in the completion popup
 - Go to Symbol (index-backed; names are `vocab:name`, so `encrypt` and `aes:enc` both match; built-ins with
@@ -57,7 +75,9 @@ node tools/export-builtins.mjs /path/to/forge --check   # exit 1 if builtins.jso
 ```
 
 A word is TypeScript-defined when its `WordEntry.kind` is `primitive` or `intrinsic` (its `meta.source` is empty);
-`fl`, `constant` and `variable` words come from a `.fth` unit. At run time the plugin writes one read-only
+`fl`, `constant` and `variable` words come from a `.fth` unit. The one exception is the v0.2 core prelude (twenty
+FL words such as `sum` and `starts-with?`, compiled from a string inside `packages/lang`): they have no source file,
+so they are exported too, with kind `prelude` and the marker `[FL prelude ...]`. At run time the plugin writes one read-only
 `<vocabulary>.fl` per vocabulary into the IDE system directory (`forge-fl/builtins-<hash>`) and exposes the directory
 as a library root, so the files are indexed like any FL file. Each word is an empty colon definition whose header is
 the stack effect, under a `\` comment with its documentation and a `[TypeScript ...]` marker.
@@ -65,8 +85,9 @@ the stack effect, under a `\` comment with its documentation and a `[TypeScript 
 ## Index
 
 `FLIndex` (a file-based index, `src/main/java/com/forge/fl/index`) holds per file: declarations keyed
-`D<vocab>:<name>` (words, constants, variables with `n!`, primitives, aliases, private ones included), word uses keyed
-`U<bareName>` and the vocabularies the file switches to or declares into, `V<vocab>`. It is computed from the token
+`D<vocab>:<name>` (words, constants, variables with `n!`, primitives, aliases, private ones included), choice types
+keyed `T<vocab>:<name>`, word and choice-type uses keyed `U<bareName>` and the vocabularies the file switches to or
+declares into, `V<vocab>`. It is computed from the token
 stream alone (`FLLightScan`); bump `FLIndex.VERSION` when the format or the scanning rules change.
 
 ## Requirements

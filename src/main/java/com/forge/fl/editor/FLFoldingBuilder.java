@@ -2,6 +2,7 @@
 package com.forge.fl.editor;
 
 import com.forge.fl.FLTokenTypes;
+import com.forge.fl.psi.FLChoiceType;
 import com.forge.fl.psi.FLDefinition;
 import com.forge.fl.psi.FLElementTypes;
 import com.forge.fl.psi.FLMetaBlock;
@@ -43,6 +44,8 @@ public final class FLFoldingBuilder extends FoldingBuilderEx implements DumbAwar
             } else if (e instanceof FLMetaBlock b) {
                 FLWordRef t = b.getTarget();
                 add(out, document, e, e.getTextRange(), "META: " + (t == null ? "" : t.getText()) + " ...");
+            } else if (e instanceof FLChoiceType c) {
+                add(out, document, e, e.getTextRange(), "CHOICE: " + (c.getName() == null ? "" : c.getName()) + " ...");
             } else if (type == FLElementTypes.QUOTATION) {
                 add(out, document, e, e.getTextRange(), "[ ... ]");
             } else if (type == FLElementTypes.LIST_LITERAL) {
@@ -70,7 +73,7 @@ public final class FLFoldingBuilder extends FoldingBuilderEx implements DumbAwar
 
     private static String definitionPlaceholder(FLDefinition d) {
         String eff = d.getEffectText();
-        return ": " + d.getName() + (eff == null ? "" : " " + cap(eff)) + " ...";
+        return d.getKeywordText() + " " + d.getName() + (eff == null ? "" : " " + cap(eff)) + " ...";
     }
 
     private static String cap(String s) {

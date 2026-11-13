@@ -100,7 +100,8 @@ public class FLStructureViewElement implements StructureViewTreeElement, Sortabl
     }
 
     private static boolean isDeclaration(PsiElement c) {
-        return c instanceof FLDefinition || c instanceof FLConstant || c instanceof FLVariable || c instanceof FLPrimitive;
+        return c instanceof FLDefinition || c instanceof FLConstant || c instanceof FLVariable || c instanceof FLPrimitive
+                || c instanceof com.forge.fl.psi.FLChoiceType;
     }
 
     @NotNull

@@ -6,6 +6,7 @@ import com.forge.fl.builtins.FLBuiltins;
 import com.forge.fl.psi.FLDefinition;
 import com.forge.fl.psi.FLElementTypes;
 import com.forge.fl.psi.FLInForm;
+import com.forge.fl.psi.FLLocal;
 import com.forge.fl.psi.FLMetaClause;
 import com.forge.fl.psi.FLNamedElement;
 import com.forge.fl.psi.FLParamRef;
@@ -28,7 +29,9 @@ import org.jetbrains.annotations.NotNull;
 public final class FLSemanticAnnotator implements Annotator {
     @Override
     public void annotate(@NotNull PsiElement element, @NotNull AnnotationHolder holder) {
-        if (element instanceof FLMetaClause clause) {
+        if (element instanceof FLMetaClause clause
+                || element.getNode().getElementType() == FLElementTypes.CHOICE_OPTION) {
+            PsiElement clause = element;
             PsiElement kw = clause.getFirstChild();
             if (kw != null && kw.getNode().getElementType() == FLTokenTypes.WORD_NAME) {
                 mark(holder, kw.getTextRange(), FLSyntaxHighlighter.META_KEYWORD);
@@ -38,7 +41,9 @@ public final class FLSemanticAnnotator implements Annotator {
             if (word != null) mark(holder, word.getTextRange(), FLSyntaxHighlighter.META_KEYWORD);
         } else if (element instanceof FLNamedElement named) {
             PsiElement id = named.getNameIdentifier();
-            if (id != null && !(element instanceof FLParameter)) {
+            if (id != null && element instanceof FLLocal) {
+                mark(holder, id.getTextRange(), FLSyntaxHighlighter.PARAMETER_USE);
+            } else if (id != null && !(element instanceof FLParameter)) {
                 mark(holder, id.getTextRange(), FLSyntaxHighlighter.DECLARATION_NAME);
             }
         } else if (element instanceof FLInForm in) {
@@ -66,7 +71,7 @@ public final class FLSemanticAnnotator implements Annotator {
         ResolveResult[] results = ref.getReference().multiResolve(false);
         if (results.length != 1) return;
         PsiElement target = results[0].getElement();
-        if (target instanceof FLParameter) {
+        if (target instanceof FLParameter || target instanceof FLLocal) {
             mark(holder, r, FLSyntaxHighlighter.PARAMETER_USE);
         } else if (target instanceof FLDefinition && FLBuiltins.isBuiltin(target)) {
             int from = vocab == null ? r.getStartOffset() : r.getStartOffset() + vocab.length() + 1;

@@ -20,13 +20,14 @@ public final class FLBreadcrumbsProvider implements BreadcrumbsProvider {
 
     @Override
     public boolean acceptElement(@NotNull PsiElement e) {
-        return e instanceof FLDefinition || e instanceof FLMetaBlock;
+        return e instanceof FLDefinition || e instanceof FLMetaBlock || e instanceof com.forge.fl.psi.FLChoiceType;
     }
 
     @NotNull
     @Override
     public String getElementInfo(@NotNull PsiElement e) {
-        if (e instanceof FLDefinition d) return ": " + d.getName();
+        if (e instanceof FLDefinition d) return d.getKeywordText() + " " + d.getName();
+        if (e instanceof com.forge.fl.psi.FLChoiceType c) return "CHOICE: " + c.getName();
         FLWordRef t = ((FLMetaBlock) e).getTarget();
         return "META: " + (t == null ? "" : t.getText());
     }

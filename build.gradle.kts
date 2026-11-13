@@ -74,5 +74,7 @@ tasks {
     test {
         // Run the optional corpus check: ./gradlew test -Dfl.corpus=/path/to/dir-of-.fth-files
         System.getProperty("fl.corpus")?.let { systemProperty("fl.corpus", it) }
+        // FLStyleGuideTest checks every example of the style guide against the formatter
+        inputs.file("docs/FL-STYLE.md").withPropertyName("styleGuide")
     }
 }

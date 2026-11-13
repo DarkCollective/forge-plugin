@@ -84,11 +84,21 @@ public class FLColorSettingsPage implements ColorSettingsPage {
                 + "  \"The hash of the password.\" <mk>doc</mk>\n"
                 + "  \"Key derivation\" <mk>category</mk>\n"
                 + "  ( a block comment ) <par>password</par> <par>salt</par> <voc>util</voc>:_derive\n"
-                + "  [ 1 2 <bi>+</bi> ] <bi>drop</bi> { 'a' #[ de ad ] true 0x1F 1.5e3 } <bi>drop</bi> counter! ;\n"
+                + "  [ 1 2 <bi>+</bi> ] <bi>drop</bi> { 'a' #[ de ad ] true 0x1F 1.5e3 } <bi>drop</bi> counter!\n"
+                + "  <bi>dup</bi> :> <par>hash</par> <par>hash</par> ;\n"
+                + "\n"
+                + "CHOICE: <decl>padding</decl>\n"
+                + "  <mk>option</mk> pkcs7 \"PKCS#7 padding.\" ;\n"
+                + "  <mk>option</mk> none ;\n"
+                + ";\n"
+                + "\n"
+                + "MEMO: <decl>_table</decl> ( -- record ) { } <bi>>record</bi> ;\n"
                 + "\n"
                 + "META: derive\n"
                 + "  <mk>param</mk> salt \"The salt, at least 8 bytes.\" ;\n"
                 + "  <mk>see-also</mk> <voc>util</voc>:compare ;\n"
+                + "  <mk>use-when</mk> \"You need a key from a password.\" ;\n"
+                + "  <mk>link</mk> \"https://example.com/kdf\" \"About KDFs\" ;\n"
                 + ";\n";
     }
 

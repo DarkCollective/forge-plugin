@@ -46,7 +46,8 @@ import java.util.Set;
  */
 public class FLCompletionContributor extends CompletionContributor {
     private static final List<String> KEYWORDS = List.of(
-            ":", ";", "IN:", "USING:", "META:", "VOCAB", "CONSTANT", "VARIABLE", "PRIMITIVE", "recurse", "true", "false");
+            ":", ";", "IN:", "USING:", "META:", "MEMO:", "CHOICE:", ":>", "VOCAB", "CONSTANT", "VARIABLE", "PRIMITIVE",
+            "recurse", "true", "false");
 
     public FLCompletionContributor() {
         extend(CompletionType.BASIC,
@@ -60,6 +61,56 @@ public class FLCompletionContributor extends CompletionContributor {
                         complete(parameters, result);
                     }
                 });
+        // name:choice<|> in a header (FL v0.2, docs/LANGUAGE.md 6.8)
+        extend(CompletionType.BASIC,
+                PlatformPatterns.psiElement(FLTokenTypes.HDR_CHOICE_REF).withLanguage(FLLanguage.INSTANCE),
+                new CompletionProvider<>() {
+                    @Override
+                    protected void addCompletions(@NotNull CompletionParameters parameters,
+                                                  @NotNull ProcessingContext context,
+                                                  @NotNull CompletionResultSet result) {
+                        completeChoiceType(parameters, result);
+                    }
+                });
+    }
+
+    /**
+     * Choice types visible at the caret: those of the current vocabulary (private ones too), the public ones of
+     * the imported vocabularies, and after {@code vocab:} the public types of that vocabulary.
+     */
+    private static void completeChoiceType(CompletionParameters parameters, CompletionResultSet result) {
+        PsiElement position = parameters.getPosition();
+        int caret = parameters.getOffset() - position.getTextRange().getStartOffset();
+        String typed = position.getText().substring(0, Math.max(0, Math.min(caret, position.getTextLength())));
+        PsiFile file = parameters.getOriginalFile();
+        FLScope scope = FLScope.of(file);
+        int offset = parameters.getOffset();
+        String current = scope.vocabAt(offset);
+        int colon = typed.indexOf(':');
+        List<String> vocabs = new java.util.ArrayList<>();
+        String prefix = typed;
+        if (colon > 0) {
+            vocabs.add(typed.substring(0, colon));
+            prefix = typed.substring(colon + 1);
+        } else {
+            vocabs.add(current);
+            vocabs.addAll(scope.usingAt(offset));
+        }
+        CompletionResultSet r = result.withPrefixMatcher(new PlainPrefixMatcher(prefix, true));
+        Set<String> seen = new java.util.HashSet<>();
+        for (String v : vocabs) {
+            boolean own = v.equals(current);
+            for (FLScope.Decl d : scope.types()) {
+                if (d.vocab().equals(v) && (own || !FLResolver.isPrivateName(d.name())) && seen.add(d.name())) {
+                    r.addElement(item(d.element(), d.name(), v, d.element().getEffectText()).withIcon(d.element().getIcon(0)));
+                }
+            }
+            for (FLIndexLookup.Decl d : FLIndexLookup.typesOf(file.getProject(), v).values()) {
+                if ((own || !FLResolver.isPrivateName(d.name())) && seen.add(d.name())) {
+                    r.addElement(item(d.name(), d.name(), v, null).withIcon(com.intellij.icons.AllIcons.Nodes.Enum));
+                }
+            }
+        }
     }
 
     private static void complete(CompletionParameters parameters, CompletionResultSet result) {
@@ -99,16 +150,21 @@ public class FLCompletionContributor extends CompletionContributor {
 
         CompletionResultSet r = result.withPrefixMatcher(new PlainPrefixMatcher(typed, true));
         Map<String, LookupElementBuilder> items = new LinkedHashMap<>();
-        // 1. parameters (and nothing else inside a META: block header)
+        // 1. locals: :> bindings visible here (FL v0.2, 7.1), then the parameters
         FLDefinition def = PsiTreeUtil.getParentOfType(position, FLDefinition.class);
-        if (def == null) {
-            def = enclosingDefinitionOf(scope, file, offset);
-        }
         if (def != null) {
-            for (FLParameter p : def.getParameters()) {
-                String n = p.getName();
-                if (n != null) {
-                    items.putIfAbsent(n, LookupElementBuilder.create(p, n).withIcon(p.getIcon(0)).withTypeText("parameter"));
+            for (FLNamedElement l : FLResolver.visibleLocals(position)) {
+                items.putIfAbsent(l.getName(), LookupElementBuilder.create(l, l.getName()).withIcon(l.getIcon(0))
+                        .withTypeText(l.getKindName()));
+            }
+        } else {
+            def = enclosingDefinitionOf(scope, file, offset);
+            if (def != null) {
+                for (FLParameter p : def.getParameters()) {
+                    String n = p.getName();
+                    if (n != null) {
+                        items.putIfAbsent(n, LookupElementBuilder.create(p, n).withIcon(p.getIcon(0)).withTypeText("parameter"));
+                    }
                 }
             }
         }

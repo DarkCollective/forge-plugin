@@ -12,7 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.List;
 
-/** {@code : name ( header ) decls body ;} */
+/** {@code : name ( header ) decls body ;}, or the same with {@code MEMO:} (FL v0.2, docs/LANGUAGE.md 5.13). */
 public class FLDefinition extends FLNamedElement {
     public FLDefinition(@NotNull ASTNode node) {
         super(node);
@@ -25,12 +25,24 @@ public class FLDefinition extends FLNamedElement {
 
     @Override
     public String getKindName() {
-        return "word";
+        return isMemo() ? "memo word" : "word";
     }
 
     @Override
     protected PsiElement createNameLeaf(String name) {
         return FLElementFactory.createDefinitionName(getProject(), name);
+    }
+
+    /** Whether this is a {@code MEMO:} definition. */
+    public boolean isMemo() {
+        ASTNode first = getNode().getFirstChildNode();
+        return first != null && first.getElementType() == FLTokenTypes.MEMO_KW;
+    }
+
+    /** The keyword that opens the definition: {@code :} or {@code MEMO:}. */
+    @NotNull
+    public String getKeywordText() {
+        return isMemo() ? "MEMO:" : ":";
     }
 
     @Nullable

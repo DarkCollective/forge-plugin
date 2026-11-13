@@ -20,7 +20,8 @@ import org.jetbrains.annotations.Nullable;
 public class FLStructureViewModel extends StructureViewModelBase implements StructureViewModel.ElementInfoProvider {
     public FLStructureViewModel(@NotNull PsiFile psiFile, @Nullable Editor editor) {
         super(psiFile, editor, new FLStructureViewElement(psiFile));
-        withSuitableClasses(FLDefinition.class, FLConstant.class, FLVariable.class, FLPrimitive.class, FLInForm.class);
+        withSuitableClasses(FLDefinition.class, FLConstant.class, FLVariable.class, FLPrimitive.class, FLInForm.class,
+                com.forge.fl.psi.FLChoiceType.class);
         withSorters(Sorter.ALPHA_SORTER);
     }
 

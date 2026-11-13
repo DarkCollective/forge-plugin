@@ -15,7 +15,8 @@
  * (every vocabulary, every key of `vocab.words`, private words and aliases included). A WordEntry has a `kind`:
  * "fl", "constant" and "variable" come from a .fth unit (their `meta.source.unit` and `.text` are set);
  * "primitive" and "intrinsic" come from TypeScript (`meta.source` is all null). The script asserts that the two
- * criteria agree, and drops any primitive that a `.fth` source binds with a PRIMITIVE form (there is none today),
+ * criteria agree (the one exception is the FL prelude of core, kind "fl" without a source unit, exported with kind
+ * "prelude"), and drops any primitive that a `.fth` source binds with a PRIMITIVE form (there is none today),
  * because the plugin sees that declaration in the .fth file itself.
  */
 import { readFileSync, readdirSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
@@ -68,16 +69,19 @@ for (const vocabName of dict.vocabs()) {
   for (const [key, entry] of vocab.words) {
     const fromTs = entry.kind === "primitive" || entry.kind === "intrinsic";
     const fromFth = entry.meta.source.unit !== null;
-    if (fromTs === fromFth) {
+    // FL v0.2: the core prelude (LANGUAGE.md section 13.8) is FL code compiled from a string inside
+    // packages/lang, so its words have kind "fl" and no source unit. No .fth file declares them.
+    const prelude = entry.kind === "fl" && !fromFth && vocabName === "core";
+    if (fromTs === fromFth && !prelude) {
       throw new Error(`${vocabName}:${key}: kind ${entry.kind} and source.unit ${entry.meta.source.unit} disagree`);
     }
-    if (!fromTs) continue;
+    if (fromFth) continue;
     if (boundByFth.has(`${vocabName}:${key}`)) continue;
     const meta = entry.meta;
     const w = {
       vocab: vocabName,
       name: key,
-      kind: entry.kind,
+      kind: prelude ? "prelude" : entry.kind,
       effect: meta.effect.text,
       doc: meta.doc ?? null,
       category: meta.category ?? null,

@@ -11,11 +11,11 @@ import org.jetbrains.annotations.Nullable;
 import static com.forge.fl.lexer.FLSyntax.isWs;
 
 /**
- * Hand-written lexer for FL (docs/LANGUAGE.md section 2, reference: packages/lang/src/reader.ts).
+ * Hand-written lexer for FL v0.2 (docs/LANGUAGE.md section 2, reference: packages/lang/src/reader.ts).
  *
  * <p>A token is a maximal run of non-whitespace characters, classified by the spec rules, with the string, char,
- * comment, header and byte-array exceptions. The only lookbehind the language has is the {@code : name (} header
- * rule; it, and the position inside a header, are encoded in {@link #getState()} so the lexer can restart at any
+ * comment, header and byte-array exceptions. The only lookbehind the language has is the {@code : name (} (or
+ * {@code MEMO: name (}) header rule; it, and the position inside a header, are encoded in {@link #getState()} so the lexer can restart at any
  * token boundary. The lexer never throws, always advances, and never runs past the end of the buffer.
  */
 public final class FLLexer extends LexerBase {
@@ -31,6 +31,11 @@ public final class FLLexer extends LexerBase {
     public static final int S_HDR_OUT = 4;
     /** The last two significant tokens were ': :'; both "after ':'" and "after ': name'". */
     public static final int S_AFTER_COLON_NAME = 5;
+    /** Inside a header input item, after {@code name:choice<}: the type reference comes next (FL v0.2, 5.4). */
+    public static final int S_HDR_CHOICE = 6;
+    /** Inside a header input item, after the type reference of {@code choice<...}: the rest of the item. */
+    public static final int S_HDR_CHOICE_END = 7;
+    private static final int S_MAX = S_HDR_CHOICE_END;
 
     private CharSequence buffer = "";
     private int end;
@@ -48,7 +53,7 @@ public final class FLLexer extends LexerBase {
         buffer = buf;
         end = Math.min(endOffset, buf.length());
         pos = startOffset;
-        state = initialState >= S_NORMAL && initialState <= S_AFTER_COLON_NAME ? initialState : S_NORMAL;
+        state = initialState >= S_NORMAL && initialState <= S_MAX ? initialState : S_NORMAL;
         locate();
     }
 
@@ -123,7 +128,7 @@ public final class FLLexer extends LexerBase {
 
     private int stateAfter(IElementType t) {
         boolean afterColon = state == S_AFTER_COLON || state == S_AFTER_COLON_NAME;
-        if (t == FLTokenTypes.COLON) return afterColon ? S_AFTER_COLON_NAME : S_AFTER_COLON;
+        if (FLTokenTypes.DEFINERS.contains(t)) return afterColon ? S_AFTER_COLON_NAME : S_AFTER_COLON;
         if (afterColon && FLTokenTypes.NAME_LIKE.contains(t)) return S_AFTER_NAME;
         return S_NORMAL;
     }
@@ -137,7 +142,7 @@ public final class FLLexer extends LexerBase {
     private void lex() {
         int i = pos;
         char c = buffer.charAt(i);
-        if (state == S_HDR_IN || state == S_HDR_OUT) {
+        if (state == S_HDR_IN || state == S_HDR_OUT || state == S_HDR_CHOICE || state == S_HDR_CHOICE_END) {
             lexHeader(i, c);
             return;
         }
@@ -230,6 +235,9 @@ public final class FLLexer extends LexerBase {
             case "IN:" -> FLTokenTypes.IN_KW;
             case "USING:" -> FLTokenTypes.USING_KW;
             case "META:" -> FLTokenTypes.META_KW;
+            case "MEMO:" -> FLTokenTypes.MEMO_KW;
+            case "CHOICE:" -> FLTokenTypes.CHOICE_KW;
+            case ":>" -> FLTokenTypes.BIND_KW;
             case "VOCAB" -> FLTokenTypes.VOCAB_KW;
             case "CONSTANT" -> FLTokenTypes.CONSTANT_KW;
             case "VARIABLE" -> FLTokenTypes.VARIABLE_KW;
@@ -327,12 +335,25 @@ public final class FLLexer extends LexerBase {
 
     // ---- header ------------------------------------------------------------------------------------------
 
+    /** The start of the rest of a parameter item whose type is a shared choice type (spec 5.4). */
+    private static final String CHOICE_REF_OPEN = ":choice<";
+
     private void lexHeader(int i, char c) {
+        boolean inChoice = state == S_HDR_CHOICE || state == S_HDR_CHOICE_END;
         if (isWs(c)) {
             int j = i + 1;
             while (j < end && isWs(buffer.charAt(j))) j++;
-            emit(TokenType.WHITE_SPACE, j, state);
+            emit(TokenType.WHITE_SPACE, j, inChoice ? S_HDR_IN : state); // an unterminated choice<: the item ends
             return;
+        }
+        if (state == S_HDR_CHOICE) { // the type reference: up to '>' or whitespace
+            int k = i;
+            while (k < end && !isWs(buffer.charAt(k)) && buffer.charAt(k) != '>') k++;
+            if (k > i) {
+                emit(FLTokenTypes.HDR_CHOICE_REF, k, S_HDR_CHOICE_END);
+                return;
+            }
+            state = S_HDR_CHOICE_END; // choice<> : no reference, the rest of the item follows
         }
         if (c == ')' && (i + 1 >= end || isWs(buffer.charAt(i + 1)))) {
             emit(FLTokenTypes.HDR_RPAREN, i + 1, S_NORMAL);
@@ -355,6 +376,10 @@ public final class FLLexer extends LexerBase {
             }
         }
         String item = buffer.subSequence(i, k).toString();
+        if (inChoice) { // '>' and any constraint or default after a choice<...> reference
+            emit(FLTokenTypes.HDR_PARAM_REST, k, S_HDR_IN);
+            return;
+        }
         boolean in = state == S_HDR_IN;
         if (item.equals("--") && in) {
             emit(FLTokenTypes.HDR_ARROW, k, S_HDR_OUT);
@@ -371,6 +396,10 @@ public final class FLLexer extends LexerBase {
 
     private void lexInputItem(int i, int k, String item) {
         if (item.charAt(0) == ':') { // the rest of a parameter item, after its name token
+            if (item.startsWith(CHOICE_REF_OPEN)) { // name:choice<type>: the reference is a token of its own
+                emit(FLTokenTypes.HDR_PARAM_REST, i + CHOICE_REF_OPEN.length(), S_HDR_CHOICE);
+                return;
+            }
             emit(FLTokenTypes.HDR_PARAM_REST, k, state);
             return;
         }

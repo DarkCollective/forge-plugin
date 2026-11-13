@@ -98,6 +98,29 @@ public final class FLIndexLookup {
         return hits(project, FLIndex.declKey(vocab, name));
     }
 
+    /** Declarations of the choice type {@code name} in {@code vocab} (FL v0.2, {@code CHOICE:}). */
+    @NotNull
+    public static List<Hit> typeDeclarations(@NotNull Project project, @NotNull String vocab, @NotNull String name) {
+        return hits(project, FLIndex.typeKey(vocab, name));
+    }
+
+    /** The choice types of a vocabulary, {@code name -> declaration}, for completion. */
+    @NotNull
+    public static Map<String, Decl> typesOf(@NotNull Project project, @NotNull String vocab) {
+        String prefix = "T" + vocab + ':';
+        Map<String, Decl> out = new java.util.TreeMap<>();
+        for (String key : keysWithPrefix(project, prefix)) {
+            String name = key.substring(prefix.length());
+            for (Hit h : hits(project, key)) {
+                if (!h.entries().isEmpty()) {
+                    out.putIfAbsent(name, new Decl(vocab, name, h.file(), h.entries().get(0)));
+                    break;
+                }
+            }
+        }
+        return out;
+    }
+
     /** Files that use the bare word name. */
     @NotNull
     public static List<Hit> usages(@NotNull Project project, @NotNull String bareName) {

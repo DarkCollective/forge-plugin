@@ -21,6 +21,7 @@
         <lang.parserDefinition language="FL" implementationClass="com.forge.fl.parser.FLParserDefinition"/>
         <lang.formatter language="FL" implementationClass="com.forge.fl.formatting.FLFormattingModelBuilder"/>
         <postFormatProcessor implementation="com.forge.fl.formatting.FLTrailingWhitespaceProcessor"/>
+        <langCodeStyleSettingsProvider implementation="com.forge.fl.formatting.FLLanguageCodeStyleSettingsProvider"/>
         <lang.syntaxHighlighterFactory language="FL" implementationClass="com.forge.fl.highlighting.FLSyntaxHighlighterFactory"/>
         <lang.braceMatcher language="FL" implementationClass="com.forge.fl.editor.FLBraceMatcher"/>
         <lang.commenter language="FL" implementationClass="com.forge.fl.editor.FLCommenter"/>
