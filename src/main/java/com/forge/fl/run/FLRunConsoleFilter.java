@@ -3,23 +3,13 @@ package com.forge.fl.run;
 
 import com.intellij.execution.filters.Filter;
 import com.intellij.execution.filters.OpenFileHyperlinkInfo;
-import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.util.Computable;
-import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.search.FilenameIndex;
-import com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,16 +22,11 @@ final class FLRunConsoleFilter implements Filter {
     static final Pattern LOCATION = Pattern.compile("([\\w.\\-]+\\.(?:fth|fl|forge)):(\\d+)(?::(\\d+))?");
 
     private final Project project;
-    private final @Nullable Path vocabDir;
-    private final Map<String, Path> units = new HashMap<>();
+    private final FLUnitFiles files;
 
-    FLRunConsoleFilter(@NotNull Project project, @Nullable Path checkout, @NotNull List<String> extraFiles) {
+    FLRunConsoleFilter(@NotNull Project project, @NotNull FLUnitFiles files) {
         this.project = project;
-        this.vocabDir = checkout == null ? null : FLForgeEnvironment.vocabDir(checkout);
-        for (String f : extraFiles) {
-            Path p = Path.of(f);
-            units.put(p.getFileName().toString(), p);
-        }
+        this.files = files;
     }
 
     @Nullable
@@ -51,7 +36,7 @@ final class FLRunConsoleFilter implements Filter {
         List<ResultItem> items = new ArrayList<>();
         Matcher m = LOCATION.matcher(line);
         while (m.find()) {
-            VirtualFile file = find(m.group(1));
+            VirtualFile file = files.fileOf(m.group(1));
             if (file == null) continue;
             int lineNo = Integer.parseInt(m.group(2)) - 1;
             int col = m.group(3) == null ? 0 : Integer.parseInt(m.group(3)) - 1;
@@ -59,27 +44,5 @@ final class FLRunConsoleFilter implements Filter {
                     new OpenFileHyperlinkInfo(project, file, lineNo, col)));
         }
         return items.isEmpty() ? null : new Result(items);
-    }
-
-    @Nullable
-    private VirtualFile find(String name) {
-        LocalFileSystem fs = LocalFileSystem.getInstance();
-        Path unit = units.get(name);
-        if (unit != null) {
-            VirtualFile f = fs.findFileByNioFile(unit);
-            if (f != null) return f;
-        }
-        if (vocabDir != null) {
-            VirtualFile f = fs.findFileByNioFile(vocabDir.resolve(name));
-            if (f != null) return f;
-        }
-        try {
-            return ApplicationManager.getApplication().runReadAction((Computable<VirtualFile>) () -> {
-                Collection<VirtualFile> found = FilenameIndex.getVirtualFilesByName(name, GlobalSearchScope.projectScope(project));
-                return found.isEmpty() ? null : found.iterator().next();
-            });
-        } catch (IndexNotReadyException e) {
-            return null;
-        }
     }
 }

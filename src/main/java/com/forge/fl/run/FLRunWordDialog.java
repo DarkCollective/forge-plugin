@@ -34,13 +34,13 @@ final class FLRunWordDialog extends DialogWrapper {
     private final JBTextField rawInputs = new JBTextField(40);
     private final JBLabel preview = new JBLabel();
 
-    FLRunWordDialog(@NotNull Project project, @NotNull String qname, @Nullable List<FLRunInputs.Slot> slots) {
+    FLRunWordDialog(@NotNull Project project, @NotNull String qname, @Nullable List<FLRunInputs.Slot> slots, @NotNull String verb) {
         super(project);
         this.project = project;
         this.qname = qname;
         this.slots = slots;
-        setTitle("Run " + qname);
-        setOKButtonText("Run");
+        setTitle(verb + " " + qname);
+        setOKButtonText(verb);
         init();
         updatePreview();
     }

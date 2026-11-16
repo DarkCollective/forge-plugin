@@ -2,7 +2,10 @@
 
 Status: research, November 2026. Phase 1 (Run) is implemented: see *Running FL* in the README. The input
 dialog uses text fields for `bytes`, `key` and `toggle` (an FL literal or text), not separate hex and Base64 modes.
-The debugger (phase 2) is not implemented.
+Phase 2 (Debug) is implemented too: see *Debugging FL* in the README. Locals use the `StepEvent.frames()`
+addition to `@forge/lang` proposed below. Differences from the plan: the runner tracks activations itself (a
+`returnDepth` change can be a list or loop frame, not a call), and every debug run uses `stepAll`, so breakpoints
+can change while the program runs.
 
 ## Verdict
 

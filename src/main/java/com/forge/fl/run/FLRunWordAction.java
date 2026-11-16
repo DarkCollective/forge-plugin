@@ -5,8 +5,7 @@ import com.forge.fl.psi.FLDefinition;
 import com.intellij.execution.ProgramRunnerUtil;
 import com.intellij.execution.RunManager;
 import com.intellij.execution.RunnerAndConfigurationSettings;
-import com.intellij.execution.executors.DefaultRunExecutor;
-import com.intellij.icons.AllIcons;
+import com.intellij.execution.Executor;
 import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -25,10 +24,14 @@ import java.util.List;
 /** Asks for the inputs of a word, then runs it through a temporary FL run configuration named after the word. */
 final class FLRunWordAction extends AnAction {
     private final SmartPsiElementPointer<FLDefinition> pointer;
+    private final Executor executor;
 
-    FLRunWordAction(@NotNull FLDefinition def) {
-        super("Run '" + FLRunInputs.qualifiedName(def) + "'…", "Run the word with inputs you enter", AllIcons.Actions.Execute);
+    /** {@code executor} is the Run or the Debug executor. */
+    FLRunWordAction(@NotNull FLDefinition def, @NotNull Executor executor) {
+        super(executor.getActionName() + " '" + FLRunInputs.qualifiedName(def) + "'…",
+                executor.getActionName() + " the word with inputs you enter", executor.getIcon());
         pointer = SmartPointerManager.createPointer(def);
+        this.executor = executor;
     }
 
     @NotNull
@@ -49,7 +52,7 @@ final class FLRunWordAction extends AnAction {
         if (slots != null && slots.isEmpty()) {
             program = qname;
         } else {
-            FLRunWordDialog dialog = new FLRunWordDialog(project, qname, slots);
+            FLRunWordDialog dialog = new FLRunWordDialog(project, qname, slots, executor.getActionName());
             if (!dialog.showAndGet()) return;
             program = dialog.program();
         }
@@ -58,11 +61,10 @@ final class FLRunWordAction extends AnAction {
         Path checkout = FLForgeEnvironment.findCheckout(project, file);
         if (checkout == null) {
             Messages.showErrorDialog(project, "No Forge checkout was found for this file. Create an FL run configuration and set its Forge checkout.",
-                    "Run " + qname);
+                    executor.getActionName() + " " + qname);
             return;
         }
-        ProgramRunnerUtil.executeConfiguration(configure(project, qname, program, vocab, checkout, file),
-                DefaultRunExecutor.getRunExecutorInstance());
+        ProgramRunnerUtil.executeConfiguration(configure(project, qname, program, vocab, checkout, file), executor);
     }
 
     /** Finds or creates the temporary configuration named after the word and fills it in. */

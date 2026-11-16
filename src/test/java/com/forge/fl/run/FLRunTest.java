@@ -85,7 +85,11 @@ public class FLRunTest extends FLTestBase {
     public void testLineMarkerOnWordNamesOnly() {
         FLDefinition def = definition("IN: demo\n: f ( -- int ) 1 ;\n: g ( -- int ) f ;\n", "g");
         RunLineMarkerContributor c = new FLRunLineMarkerContributor();
-        assertNotNull(c.getInfo(def.getNameIdentifier()));
+        RunLineMarkerContributor.Info info = c.getInfo(def.getNameIdentifier());
+        assertNotNull(info);
+        assertEquals(2, info.actions.length);
+        assertEquals("Run 'demo:g'…", info.actions[0].getTemplatePresentation().getText());
+        assertEquals("Debug 'demo:g'…", info.actions[1].getTemplatePresentation().getText());
         PsiElement ref = PsiTreeUtil.findChildrenOfType(def, com.forge.fl.psi.FLWordRef.class).iterator().next();
         assertNull(c.getInfo(ref.getFirstChild() == null ? ref : ref.getFirstChild()));
         assertNull(c.getInfo(def.getFirstChild()));
@@ -111,6 +115,7 @@ public class FLRunTest extends FLTestBase {
         assertEquals(0, d.getMaxMillis());
         assertEquals("{\"checkout\":\"/forge\",\"program\":\"\\\"a\\\\b\\\"\\n1 demo:f\",\"vocab\":\"demo\","
                 + "\"units\":[{\"name\":\"mine.fth\",\"path\":\"/x/mine.fth\"}],\"limits\":{\"maxSteps\":1000}}", d.requestJson());
+        assertTrue(d.requestJson(true).endsWith("\"limits\":{\"maxSteps\":1000},\"debug\":true}"));
     }
 
     public void testConfigureCreatesTemporaryConfigurationPerWord() {

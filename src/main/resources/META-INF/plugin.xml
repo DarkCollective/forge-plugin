@@ -9,6 +9,7 @@
     ]]></description>
 
     <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.xdebugger</depends>
 
 
     <extensions defaultExtensionNs="com.intellij">
@@ -58,6 +59,8 @@
         <completion.contributor language="FL" implementationClass="com.forge.fl.completion.FLCompletionContributor"/>
         <configurationType implementation="com.forge.fl.run.FLRunConfigurationType"/>
         <runLineMarkerContributor language="FL" implementationClass="com.forge.fl.run.FLRunLineMarkerContributor"/>
+        <programRunner implementation="com.forge.fl.debug.FLDebugRunner"/>
+        <xdebugger.breakpointType implementation="com.forge.fl.debug.FLLineBreakpointType"/>
         <intentionAction>
             <className>com.forge.fl.intentions.FLMoveMetaBlockIntention</className>
             <category>FL</category>

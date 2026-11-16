@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (debugging FL)
+- An FL debugger: line breakpoints (hit on each entry of the line, also per pass of a loop or quotation), step
+  into/over/out by line, run to cursor, pause, stop, frames of words and quotations, locals and the data stack.
+  Debug from the gutter menu of a word or with the Debug executor on any FL run configuration.
+- The runner's debug mode: a JSON-lines protocol on stdin and marked event lines on stdout (`FLDebugProcessHandler`
+  keeps them out of the console). Locals come from `StepEvent.frames()`, an additive `@forge/lang` API; without it
+  the debugger shows the innermost frame only.
+- `FLDebugTest`, `FLDebugProcessHandlerTest` (with `-Dfl.forge`, a scripted debug session against a real checkout).
+
 ### Changed (FL v0.2, Forge main of 16 November 2026)
 - `checks` is no longer reserved: `checks <input|output> <test> <arguments> ;` with the tests `regex`, `charset`,
   `entropy`, `magic-bytes` (hex and offset, or `format`), `printable`, `utf8` and `binary`, validated as Forge's

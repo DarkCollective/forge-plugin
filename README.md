@@ -63,7 +63,7 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   stack effect as tail text and the vocabulary as type text; `vocab:` offers that vocabulary's words; `USING:` and
   `IN:` offer vocabulary names
 - color settings page for FL syntax colors
-- running FL code and words with the Forge engine (see *Running FL* below)
+- running and debugging FL code and words with the Forge engine (see *Running FL* and *Debugging FL* below)
 
 ## Running FL
 
@@ -95,7 +95,36 @@ links. The stop button kills the run.
 Under the hood the plugin starts `node forge-runner.mjs` (bundled in the plugin, copied to the IDE system directory)
 and sends it the request as JSON on stdin; the runner imports `@forge/ops` and `@forge/lang` from the checkout's
 `dist` directories. TypeScript primitives are taken from the last build, so rebuild Forge after changing one.
-Debugging (breakpoints, stepping) is not implemented yet; see [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
+
+## Debugging FL
+
+**Debug** works wherever **Run** does: the gutter ▶ menu has *Debug 'vocab:word'…* (same input dialog), and any FL
+run configuration can be started with the Debug executor.
+
+- **Line breakpoints** in `.fl`/`.fth` files, on lines that hold code. A breakpoint is hit each time its line is
+  entered: once per call, and once per pass of a loop or of a quotation run by `map`, `each`, `times` and the other
+  combinators. A breakpoint in a file the run does not load (not in the checkout's `packages/ops/vocab` and not an
+  extra file) is shown as invalid. Breakpoints can be added, removed, disabled and muted while the program runs.
+- **Stepping** is by source line: *Step Into* stops at the next line entered anywhere (a called word, a quotation);
+  *Step Over* at the next line of the same word or quotation, or in its caller after it returns; *Step Out* in the
+  caller. Steps stop only in code with a source file, so `<console>` code and the core prelude are run through.
+  *Run to Cursor*, *Pause* (stops at the next instruction) and *Stop* work too.
+- **Frames**: the activations innermost first, each word or quotation (`[ quotation ]`) with its file and line;
+  `<console>` code is shown without a position.
+- **Variables**: the locals of the selected frame (header names, then `:>` names once bound; a quotation sees the
+  locals of its word) and, on the innermost frame, the data stack top first (`[0]` is the top). Values show as
+  their repr, secrets as `<redacted>`; a long value is cut in the tree, with *View* for the whole (up to 1000
+  characters).
+
+Locals need a Forge whose `@forge/lang` has `StepEvent.frames()` (LANGUAGE.md §10.9). With an older build, the
+debugger still stops and steps but shows only the innermost frame and no locals. There is no expression evaluation
+or value editing yet. While debugging, the program runs with `stepAll`, about a million instructions a second, so
+stepping over a call that hashes a large input takes a while; a run without debugging is unaffected.
+
+Under the hood the runner keeps stdin open in debug mode: the plugin sends commands (`start`, `setBreakpoints`,
+`resume`, `stepOver`, `stepInto`, `stepOut`, `pause`, `stop`), one JSON line each, and the runner answers with
+`ready`, `paused` (frames, locals, stack) and `resumed` events on stdout lines that start with `\u0001FL-DEBUG `, which
+the plugin takes out of the console. The protocol is described at the top of `forge-runner.mjs`.
 
 ## Built-in words
 

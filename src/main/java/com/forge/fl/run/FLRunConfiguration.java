@@ -119,9 +119,21 @@ public final class FLRunConfiguration extends RunConfigurationBase<Object> {
         return copy;
     }
 
-    /** The JSON request read by {@code forge-runner.mjs}. */
+    /** The files this configuration loads, by unit name. */
+    @NotNull
+    public FLUnitFiles unitFiles() {
+        return new FLUnitFiles(getProject(), effectiveCheckout(), extraFiles);
+    }
+
+    /** The JSON request read by {@code forge-runner.mjs}, one line. */
     @NotNull
     String requestJson() {
+        return requestJson(false);
+    }
+
+    /** The JSON request, for a debug session when {@code debug} is set. */
+    @NotNull
+    String requestJson(boolean debug) {
         Path dir = effectiveCheckout();
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"checkout\":").append(json(dir == null ? "" : dir.toString()));
@@ -137,7 +149,9 @@ public final class FLRunConfiguration extends RunConfigurationBase<Object> {
         List<String> limits = new ArrayList<>();
         if (maxSteps > 0) limits.add("\"maxSteps\":" + maxSteps);
         if (maxMillis > 0) limits.add("\"maxMillis\":" + maxMillis);
-        sb.append(String.join(",", limits)).append("}}");
+        sb.append(String.join(",", limits)).append('}');
+        if (debug) sb.append(",\"debug\":true");
+        sb.append('}');
         return sb.toString();
     }
 
