@@ -36,9 +36,9 @@ public class FLBuiltinsTest extends FLMultiFileTestBase {
             assertTrue(key, w.effect().startsWith("(") && w.effect().endsWith(")"));
             previous = key;
         }
-        // grounded in the forge sources: dup/swap/rot/+ are core; raise:range and json:parse are TypeScript primitives
+        // grounded in the forge sources: dup/swap/rot/+ are core; random:bytes-of and json:parse are TypeScript primitives
         assertTrue(seen.contains("core dup") && seen.contains("core swap") && seen.contains("core +"));
-        assertTrue(seen.contains("raise range") && seen.contains("json parse"));
+        assertTrue(seen.contains("random bytes-of") && seen.contains("json parse"));
         // util:decode-table is defined in util.fth, so it must not be in the catalogue
         assertFalse(seen.contains("util decode-table"));
         assertFalse(seen.stream().anyMatch(k -> k.startsWith("util ")));

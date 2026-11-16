@@ -94,10 +94,10 @@ public class FLCompletionTest extends FLMultiFileTestBase {
     }
 
     public void testBuiltinVocabulariesAreOfferedQualified() {
-        LookupElement[] items = complete("m.fth", ": f ( -- ) raise:<caret> ;\n");
-        assertEquals(List.of("coerce", "range"), strings(items).stream().sorted().toList());
-        assertEquals(" ( reason:str -- )", present(items, "range").getTailText());
-        assertEquals("raise", present(items, "range").getTypeText());
+        LookupElement[] items = complete("m.fth", ": f ( -- ) random:<caret> ;\n");
+        assertEquals(List.of("below", "bytes-of"), strings(items).stream().sorted().toList());
+        assertEquals(" ( n:int -- bytes )", present(items, "bytes-of").getTailText());
+        assertEquals("random", present(items, "bytes-of").getTypeText());
     }
 
     public void testSymbolNamedWordsComplete() {
@@ -111,12 +111,12 @@ public class FLCompletionTest extends FLMultiFileTestBase {
         seedVocabularies();
         for (String form : new String[]{"USING: ", "IN: "}) {
             List<String> names = strings(complete("m" + form.length() + ".fth", form + "<caret>\n"));
-            assertTrue(form + names, names.containsAll(List.of("a", "json", "raise", "user")));
+            assertTrue(form + names, names.containsAll(List.of("a", "json", "random", "user")));
             assertFalse("core cannot be imported or entered", names.contains("core"));
             assertFalse("words are not offered here", names.contains("dup") || names.contains("pubw"));
         }
-        assertNull(complete("m3.fth", "USING: rai<caret>\n"));
-        myFixture.checkResult("USING: raise\n");
+        assertNull(complete("m3.fth", "USING: rand<caret>\n"));
+        myFixture.checkResult("USING: random\n");
         // vocabularies of the current file count too, and the second name of a USING: form
         add("zeta.fth", "IN: zeta\n");
         assertNull(complete("m4.fth", "USING: a ze<caret> ;\n"));
