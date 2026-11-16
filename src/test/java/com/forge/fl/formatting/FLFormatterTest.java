@@ -32,6 +32,11 @@ public class FLFormatterTest extends FLTestBase {
         assertEquals("\\ file comment\nIN: demo\n\n: f ( -- )\n  \\ body comment\n  1 ;\n", actual);
     }
 
+    public void testKeepsACommentOnTheLineWhereADefinitionEnds() {
+        String source = ": a ( -- int )\n  1 2 + ;   \\ trailing\n\n: b ( -- int )\n  3 ;\n";
+        assertEquals(source, format(source));
+    }
+
     public void testFormattingIsIdempotent() {
         String once = format(": f ( x -- int )\n  x  1 + ;\n");
         assertEquals(once, format(once));

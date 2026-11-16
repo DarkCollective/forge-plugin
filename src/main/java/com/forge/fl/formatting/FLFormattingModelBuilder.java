@@ -91,6 +91,11 @@ public final class FLFormattingModelBuilder implements FormattingModelBuilder {
                 // CHOICE: block is its documentation: one blank line before the run, none after it. Elsewhere
                 // comments keep at most one blank line around them (section headings, licence header).
                 if (isComment(right) && !isComment(left)) {
+                    // a comment on the line where the previous form ends stays there
+                    com.intellij.psi.PsiElement before = ((ASTBlock) child2).getNode().getPsi().getPrevSibling();
+                    if (before instanceof com.intellij.psi.PsiWhiteSpace ws && !ws.getText().contains("\n")) {
+                        return Spacing.createSpacing(1, Integer.MAX_VALUE, 0, true, 0);
+                    }
                     return isDocumented(nextNonComment(((ASTBlock) child2).getNode())) ? blankLine() : lineBreakKeepOne();
                 }
                 if (isComment(left)) return lineBreakKeepOne();
