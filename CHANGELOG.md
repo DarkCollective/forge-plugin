@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (evaluating FL while debugging)
+- Evaluate Expression, watches and hover in a paused FL debug session. The expression is body code of the selected
+  frame: its locals by name, a copy of the paused data stack, the program's variables, and the frame's `IN:` and
+  `USING:` scope. The result node shows the new values top first (one value as itself), how many paused values
+  the expression took, and what it printed. Hover is limited to parameters and `:>` locals of the paused word.
+- The runner's `evaluate` command and `evaluated` event: the expression is compiled as the body of a throwaway word
+  whose transaction is rolled back (nothing can be defined), and run with its own limits (10 million steps, 5 s).
+  The run and its evaluations now share one variable store.
+- The expression editor is an FL fragment (highlighting, completion) that diagnostics skip
+  (`FLFile.DEBUGGER_FRAGMENT`).
+- Tests: `FLDebugTest` (scope sent, local shortcut, results, errors, hover ranges, fragment), and evaluations in the
+  scripted session of `FLDebugProcessHandlerTest` (with `-Dfl.forge`).
+
 ### Added (debugging FL)
 - An FL debugger: line breakpoints (hit on each entry of the line, also per pass of a loop or quotation), step
   into/over/out by line, run to cursor, pause, stop, frames of words and quotations, locals and the data stack.

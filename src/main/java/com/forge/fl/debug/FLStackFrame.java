@@ -5,6 +5,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.ui.ColoredTextContainer;
 import com.intellij.ui.SimpleTextAttributes;
 import com.intellij.xdebugger.XSourcePosition;
+import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XCompositeNode;
 import com.intellij.xdebugger.frame.XStackFrame;
 import com.intellij.xdebugger.frame.XValueChildrenList;
@@ -27,15 +28,28 @@ final class FLStackFrame extends XStackFrame {
     private final Info info;
     private final @Nullable XSourcePosition position;
     private final @Nullable List<FLValue> stack;
+    private final @Nullable XDebuggerEvaluator evaluator;
 
     FLStackFrame(@NotNull Info info, @Nullable XSourcePosition position, @Nullable List<FLValue> stack) {
+        this(info, position, stack, null);
+    }
+
+    FLStackFrame(@NotNull Info info, @Nullable XSourcePosition position, @Nullable List<FLValue> stack,
+                 @Nullable XDebuggerEvaluator evaluator) {
         this.info = info;
         this.position = position;
         this.stack = stack;
+        this.evaluator = evaluator;
     }
 
     Info info() {
         return info;
+    }
+
+    @Nullable
+    @Override
+    public XDebuggerEvaluator getEvaluator() {
+        return evaluator;
     }
 
     @Nullable

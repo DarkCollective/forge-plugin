@@ -1,7 +1,9 @@
 // Copyright 2026 Darkcollective, LLC. Licensed under the Apache License, Version 2.0.
 package com.forge.fl.debug;
 
+import com.forge.fl.FLFile;
 import com.forge.fl.FLFileType;
+import com.forge.fl.FLLanguage;
 import com.forge.fl.run.FLDebugProcessHandler;
 import com.forge.fl.run.FLRunConfiguration;
 import com.forge.fl.run.FLUnitFiles;
@@ -9,7 +11,9 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.intellij.execution.process.ProcessEvent;
 import com.intellij.execution.process.ProcessHandler;
+import com.intellij.execution.process.ProcessListener;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.execution.ui.ExecutionConsole;
 import com.intellij.openapi.application.ApplicationManager;
@@ -19,6 +23,9 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.psi.PsiDocumentManager;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiFileFactory;
 import com.intellij.xdebugger.XDebugProcess;
 import com.intellij.xdebugger.XDebugSession;
 import com.intellij.xdebugger.XDebuggerUtil;
@@ -35,8 +42,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A debug session of the FL runner (forge-runner.mjs in debug mode): line breakpoints, pause, resume, step
@@ -52,6 +63,22 @@ final class FLDebugProcess extends XDebugProcess {
     private volatile boolean started;
     /** "unit:line" of a pending run to cursor, or null. */
     private volatile String runToTarget;
+    /** Evaluations sent to the runner and not answered yet, by id. */
+    private final Map<Integer, CompletableFuture<JsonObject>> evaluations = new ConcurrentHashMap<>();
+    private final AtomicInteger nextEvaluation = new AtomicInteger(1);
+    private final FLEvaluator.Backend backend = new FLEvaluator.Backend() {
+        @NotNull
+        @Override
+        public CompletableFuture<JsonObject> evaluate(@NotNull JsonObject command) {
+            return FLDebugProcess.this.evaluate(command);
+        }
+
+        @NotNull
+        @Override
+        public Project project() {
+            return getSession().getProject();
+        }
+    };
 
     FLDebugProcess(@NotNull XDebugSession session, @NotNull FLDebugProcessHandler handler, @NotNull ConsoleView console,
                    @NotNull FLRunConfiguration configuration) {
@@ -61,6 +88,39 @@ final class FLDebugProcess extends XDebugProcess {
         this.files = configuration.unitFiles();
         this.handlers = new XBreakpointHandler<?>[]{new LineHandler()};
         handler.setEventListener(this::onEvent);
+        handler.addProcessListener(new ProcessListener() {
+            @Override
+            public void processTerminated(@NotNull ProcessEvent event) {
+                failEvaluations("The FL run has ended");
+            }
+        });
+    }
+
+    // ---- evaluation -----------------------------------------------------------------------------------------
+
+    /** Sends an {@code evaluate} command; completes with the runner's {@code evaluated} event. */
+    private CompletableFuture<JsonObject> evaluate(JsonObject command) {
+        int id = nextEvaluation.getAndIncrement();
+        command.addProperty("id", id);
+        CompletableFuture<JsonObject> answer = new CompletableFuture<>();
+        evaluations.put(id, answer);
+        if (handler.isProcessTerminated() || !handler.send(command.toString())) {
+            evaluations.remove(id);
+            answer.completeExceptionally(new IllegalStateException("The FL run has ended"));
+            return answer;
+        }
+        return answer.orTimeout(EVALUATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .whenComplete((r, e) -> evaluations.remove(id));
+    }
+
+    /** The runner limits an evaluation to 5 s of run time; this only guards against a runner that never answers. */
+    private static final int EVALUATION_TIMEOUT_SECONDS = 60;
+
+    private void failEvaluations(String message) {
+        for (Integer id : List.copyOf(evaluations.keySet())) {
+            CompletableFuture<JsonObject> f = evaluations.remove(id);
+            if (f != null) f.completeExceptionally(new IllegalStateException(message));
+        }
     }
 
     @NotNull
@@ -207,9 +267,16 @@ final class FLDebugProcess extends XDebugProcess {
         } catch (RuntimeException e) {
             return;
         }
-        if (!"paused".equals(str(event, "event"))) return;
+        String kind = str(event, "event");
+        if ("evaluated".equals(kind)) {
+            JsonElement id = event.get("id");
+            CompletableFuture<JsonObject> f = id == null || id.isJsonNull() ? null : evaluations.remove(id.getAsInt());
+            if (f != null) f.complete(event);
+            return;
+        }
+        if (!"paused".equals(kind)) return;
         FLSuspendContext context = ApplicationManager.getApplication().runReadAction(
-                (Computable<FLSuspendContext>) () -> suspendContext(event, files));
+                (Computable<FLSuspendContext>) () -> suspendContext(event, files, backend));
         String reason = str(event, "reason");
         FLStackFrame.Info top = context.frames().isEmpty() ? null : context.frames().get(0).info();
         if (runToTarget != null) {
@@ -234,8 +301,14 @@ final class FLDebugProcess extends XDebugProcess {
         return null;
     }
 
-    /** The frames of a paused event (innermost first) with their source positions. */
+    /** The frames of a paused event (innermost first) with their source positions, without evaluation. */
     static FLSuspendContext suspendContext(@NotNull JsonObject event, @NotNull FLUnitFiles files) {
+        return suspendContext(event, files, null);
+    }
+
+    /** The frames of a paused event (innermost first) with their source positions; each evaluates through {@code backend}. */
+    static FLSuspendContext suspendContext(@NotNull JsonObject event, @NotNull FLUnitFiles files,
+                                           @Nullable FLEvaluator.Backend backend) {
         List<FLValue> stack = new ArrayList<>();
         JsonArray stackJson = event.getAsJsonArray("stack");
         if (stackJson != null) {
@@ -259,7 +332,9 @@ final class FLDebugProcess extends XDebugProcess {
                 }
                 FLStackFrame.Info info = new FLStackFrame.Info(str(f, "word"), "quot".equals(str(f, "kind")),
                         nullableStr(f, "unit"), integer(f, "line"), integer(f, "col"), locals);
-                frames.add(new FLStackFrame(info, position(info, files), frames.isEmpty() ? stack : null));
+                XSourcePosition position = position(info, files);
+                FLEvaluator evaluator = backend == null ? null : new FLEvaluator(backend, frames.size(), info, position);
+                frames.add(new FLStackFrame(info, position, frames.isEmpty() ? stack : null, evaluator));
             }
         }
         return new FLSuspendContext(frames);
@@ -291,8 +366,11 @@ final class FLDebugProcess extends XDebugProcess {
         return e == null || e.isJsonNull() ? null : e.getAsInt();
     }
 
-    /** No expression evaluation yet: the editors provider only has to exist. */
-    private static final XDebuggerEditorsProvider EDITORS = new XDebuggerEditorsProvider() {
+    /**
+     * Expression editors (Evaluate, watches) edit an FL fragment: highlighted and completed like FL, without
+     * diagnostics, since the fragment cannot see the paused word's locals.
+     */
+    static final XDebuggerEditorsProvider EDITORS = new XDebuggerEditorsProvider() {
         @NotNull
         @Override
         public FileType getFileType() {
@@ -303,7 +381,14 @@ final class FLDebugProcess extends XDebugProcess {
         @Override
         public Document createDocument(@NotNull Project project, @NotNull XExpression expression,
                                        @Nullable XSourcePosition sourcePosition, @NotNull EvaluationMode mode) {
-            return EditorFactory.getInstance().createDocument(expression.getExpression());
+            PsiFile fragment = ApplicationManager.getApplication().runReadAction((Computable<PsiFile>) () -> {
+                PsiFile f = PsiFileFactory.getInstance(project).createFileFromText("fragment.fl", FLLanguage.INSTANCE,
+                        expression.getExpression(), true, false);
+                f.putUserData(FLFile.DEBUGGER_FRAGMENT, Boolean.TRUE);
+                return f;
+            });
+            Document document = PsiDocumentManager.getInstance(project).getDocument(fragment);
+            return document != null ? document : EditorFactory.getInstance().createDocument(expression.getExpression());
         }
     };
 }

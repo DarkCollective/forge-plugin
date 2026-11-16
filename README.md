@@ -115,15 +115,22 @@ run configuration can be started with the Debug executor.
   locals of its word) and, on the innermost frame, the data stack top first (`[0]` is the top). Values show as
   their repr, secrets as `<redacted>`; a long value is cut in the tree, with *View* for the whole (up to 1000
   characters).
+- **Evaluate Expression, watches and hover** (while paused). An expression is FL body code run in the selected frame:
+  it sees that frame's locals by name, a copy of the paused data stack, the program's variables and the vocabularies
+  visible at the frame's line (its `IN:` and `USING:`), so `n 2 *`, `d hex:encode` or `dup length` work. The result
+  is the values the expression left on top of the stack, top first; one value shows as itself. What it prints shows
+  too. It cannot define anything (`:` is `E_SYNTAX`), may read and set variables, and stops after 10 million steps
+  or 5 seconds. The paused program's stack and locals are not changed. Hovering shows the value of a parameter or
+  `:>` local of the paused word (a word is never run on hover). The Evaluate box is highlighted and completed as FL.
 
 Locals need a Forge whose `@forge/lang` has `StepEvent.frames()` (LANGUAGE.md §10.9). With an older build, the
-debugger still stops and steps but shows only the innermost frame and no locals. There is no expression evaluation
-or value editing yet. While debugging, the program runs with `stepAll`, about a million instructions a second, so
+debugger still stops and steps but shows only the innermost frame and no locals. There is no value editing yet.
+While debugging, the program runs with `stepAll`, about a million instructions a second, so
 stepping over a call that hashes a large input takes a while; a run without debugging is unaffected.
 
 Under the hood the runner keeps stdin open in debug mode: the plugin sends commands (`start`, `setBreakpoints`,
-`resume`, `stepOver`, `stepInto`, `stepOut`, `pause`, `stop`), one JSON line each, and the runner answers with
-`ready`, `paused` (frames, locals, stack) and `resumed` events on stdout lines that start with `\u0001FL-DEBUG `, which
+`resume`, `stepOver`, `stepInto`, `stepOut`, `pause`, `stop`, `evaluate`), one JSON line each, and the runner
+answers with `ready`, `paused` (frames, locals, stack), `resumed` and `evaluated` events on stdout lines that start with `\u0001FL-DEBUG `, which
 the plugin takes out of the console. The protocol is described at the top of `forge-runner.mjs`.
 
 ## Built-in words

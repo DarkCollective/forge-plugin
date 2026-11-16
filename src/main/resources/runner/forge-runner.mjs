@@ -22,6 +22,12 @@
 //   {"cmd":"resume"} {"cmd":"stepOver"} {"cmd":"stepInto"} {"cmd":"stepOut"}   while paused
 //   {"cmd":"pause"}                                                  while running
 //   {"cmd":"stop"}                                                   end the run (E_ABORTED)
+//   {"cmd":"evaluate","id":7,"expr":"n 2 *","frame":0,"vocab":"mine","using":["util"]}   while paused
+//     Runs `expr` (FL body code) on a copy of the paused data stack, with the locals of frame `frame` (an index
+//     into the paused frames, 0 the innermost) bound by name, the program's variables, and the scope given (vocab
+//     defaults to the frame word's vocabulary, using to none). The expression is compiled as the body of a
+//     throwaway word whose transaction is rolled back, so it cannot define anything. Answered by "evaluated".
+// Evaluation sees and may change the program's variables; it has its own step and time limits (EVAL_LIMITS).
 // Events are stdout lines that start with the marker below, followed by one JSON object:
 //   {"event":"ready"}
 //   {"event":"paused","reason":"breakpoint"|"step"|"pause","frames":[...],"stack":[...]}
@@ -29,6 +35,11 @@
 //     locals and stack entries: {"name"?,"type","value"} with the value as its repr (secrets redacted);
 //     "stack" is deepest first. "locals" is empty when the engine has no StepEvent.frames().
 //   {"event":"resumed"}
+//   {"event":"evaluated","id":7,"ok":true,"stack":[...],"kept":2,"consumed":1,"output":"..."}
+//     "stack" is the whole data stack after the expression, deepest first, entries as in "paused"; the first
+//     "kept" entries are those of the paused stack it left in place (so stack.length - kept values are new), and
+//     "consumed" paused entries above them were taken by the expression. The paused program's stack is unchanged.
+//   {"event":"evaluated","id":7,"ok":false,"error":"E_UNDEFINED: undefined word 'x'","output":"..."}
 // A step stops only in code that has a source unit (not in <console> code or the core prelude).
 
 import { existsSync, readFileSync } from "node:fs";
@@ -39,6 +50,10 @@ import { pathToFileURL } from "node:url";
 const PROGRAM_UNIT = "<program>";
 const MARKER = "\u0001FL-DEBUG ";
 const MAX_REPR = 1000;
+/** Limits of one evaluation while paused: it must not hang the debugger. */
+const EVAL_LIMITS = { maxSteps: 10_000_000, maxMillis: 5_000 };
+/** The name of the throwaway word an expression is compiled into (never committed). */
+const EVAL_WORD = "_fl-debugger-eval";
 
 /** Ends the run with an exit code; caught at the top. stdout to a pipe is asynchronous on macOS, so the process
  * ends by itself (exitCode) rather than by process.exit, which could cut off output still being written. */
@@ -173,7 +188,9 @@ async function main() {
     exit(1);
   }
 
-  const options = { limits };
+  // One variable store for the run and for evaluations while paused, so that both see the same variables.
+  const vars = new Map();
+  const options = { limits, vars };
   if (typeof vocab === "string" && vocab !== "") options.scope = { current: vocab, using: [] };
 
   // ---- debugging ------------------------------------------------------------------------------------------------
@@ -222,6 +239,80 @@ async function main() {
     if (cmd.cmd === "setBreakpoints") setBreakpoints(cmd.breakpoints);
     else if (cmd.cmd === "pause") dbg.pauseRequested = true;
     else if (cmd.cmd === "stop") dbg.stopRequested = true;
+    else if (cmd.cmd === "evaluate") {
+      send({ event: "evaluated", id: cmd.id ?? null, ok: false, error: "the program is running", output: "" });
+    }
+  }
+
+  /** The vocabulary of a qualified word name, or null (console code). `core` is read-only: evaluate in `user`. */
+  function vocabOfWord(qname) {
+    const colon = typeof qname === "string" && !qname.startsWith("<") ? qname.indexOf(":") : -1;
+    const v = colon > 0 ? qname.slice(0, colon) : null;
+    return v === "core" ? null : v;
+  }
+
+  /**
+   * Evaluates `cmd.expr` while paused at `ev`, `rawFrames` being ev.frames() (still valid: the VM waits for the
+   * hook). Never throws; the answer is an "evaluated" event.
+   */
+  async function evaluate(cmd, ev, rawFrames) {
+    const id = cmd.id ?? null;
+    const answer = (fields) => send({ event: "evaluated", id, ...fields });
+    const expr = typeof cmd.expr === "string" ? cmd.expr : "";
+    if (expr.trim() === "") return answer({ ok: false, error: "nothing to evaluate", output: "" });
+    if (typeof lang.compile !== "function" || typeof lang.runVm !== "function") {
+      return answer({ ok: false, error: "this Forge build cannot evaluate expressions (no compile/runVm in @forge/lang)", output: "" });
+    }
+    const frame = rawFrames[Number.isInteger(cmd.frame) ? cmd.frame : 0] ?? rawFrames[0] ?? null;
+    const locals = frame?.locals ?? [];
+    const scope = {
+      current: (typeof cmd.vocab === "string" && cmd.vocab !== "" && cmd.vocab !== "core" ? cmd.vocab : null)
+        ?? vocabOfWord(frame?.word ?? ev.word) ?? options.scope?.current ?? "user",
+      using: Array.isArray(cmd.using) ? cmd.using.filter((u) => typeof u === "string" && u !== "core") : [],
+    };
+    const base = Array.from(ev.stack);
+    // The locals are the throwaway word's inputs, so they are bound by name above the paused stack. The expression
+    // is on lines of its own so that a trailing \ comment cannot swallow the `;`.
+    const source = `: ${EVAL_WORD} ( ${locals.map((l) => l.name).join(" ")} -- .. )\n${expr}\n;\n${EVAL_WORD}`;
+    const evalLimits = { ...lang.DEFAULT_LIMITS, ...limits, ...EVAL_LIMITS };
+    let result;
+    try {
+      const compiled = lang.compile(lang.read(source, { maxSourceChars: evalLimits.maxSourceChars, maxIntBits: evalLimits.maxIntBits }),
+        source, {
+          mode: "console",
+          dictionary: runtime.dictionary,
+          registry: runtime.registry,
+          parseHeader: lang.parseHeader,
+          sha256: lang.sha256,
+          scope,
+          unit: null,
+          trusted: false,
+          limits: evalLimits,
+        });
+      compiled.txn.rollback();
+      result = await lang.runVm(compiled.segments, {
+        stack: [...base, ...locals.map((l) => l.value)],
+        vars,
+        limits: evalLimits,
+        scope,
+      });
+    } catch (e) {
+      return answer({ ok: false, error: evalError(e), output: "" });
+    }
+    const output = result.output ?? "";
+    if (!result.ok) return answer({ ok: false, error: evalError(result.error), output });
+    let kept = 0;
+    while (kept < base.length && kept < result.stack.length && result.stack[kept] === base[kept]) kept++;
+    const stack = result.stack.map((v) => ({ type: v.tag, value: showShort(v) }));
+    return answer({ ok: true, stack, kept, consumed: base.length - kept, output });
+  }
+
+  /** "CODE: message" of an evaluation error; positions are left out (they point into the wrapped source). */
+  function evalError(e) {
+    if (isForgeError(e) || e?.name === "ForgeError" || typeof e?.code === "string") {
+      return `${e.code}: ${e.message}`;
+    }
+    return String(e?.message ?? e);
   }
 
   function frameInfo(f) {
@@ -240,6 +331,7 @@ async function main() {
     const frames = typeof ev.frames === "function"
       ? ev.frames().map(frameInfo)
       : [frameInfo({ word: ev.word, kind: "word", pos: ev.pos, locals: [] })];
+    const rawFrames = typeof ev.frames === "function" ? ev.frames() : [];
     const stack = Array.from(ev.stack, (v) => ({ type: v.tag, value: showShort(v) }));
     dbg.pauseRequested = false;
     send({ event: "paused", reason, frames, stack });
@@ -251,6 +343,9 @@ async function main() {
       switch (cmd.cmd) {
         case "setBreakpoints":
           setBreakpoints(cmd.breakpoints);
+          continue;
+        case "evaluate":
+          await evaluate(cmd, ev, rawFrames);
           continue;
         case "resume":
         case "stepOver":

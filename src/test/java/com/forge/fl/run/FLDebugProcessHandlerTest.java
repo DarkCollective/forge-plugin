@@ -88,9 +88,18 @@ public class FLDebugProcessHandlerTest extends UsefulTestCase {
         assertEquals("{\"event\":\"ready\"}", next(events));
         h.send("{\"cmd\":\"start\",\"breakpoints\":[{\"unit\":" + json(unit) + ",\"line\":6}]}");
         List<String> seen = new ArrayList<>();
+        List<String> evaluated = new ArrayList<>();
+        int step = 0;
         for (String cmd : List.of("stepInto", "stepOver", "stepOver", "stepOver", "stepInto", "resume")) {
             String paused = next(events);
             seen.add(summary(paused));
+            if (step++ == 0) {
+                // at the breakpoint in outer (a=5): a local, a word of the vocabulary, output, an error, a definition
+                for (String expr : List.of("a 10 *", "a mine:inner", "\\\"hi\\\" . a", "nope", ": x ( -- ) ;")) {
+                    h.send("{\"cmd\":\"evaluate\",\"id\":" + step + ",\"expr\":\"" + expr + "\",\"frame\":0,\"vocab\":\"mine\"}");
+                    evaluated.add(evaluation(next(events)));
+                }
+            }
             h.send("{\"cmd\":\"" + cmd + "\"}");
             assertEquals("{\"event\":\"resumed\"}", next(events));
         }
@@ -102,6 +111,12 @@ public class FLDebugProcessHandlerTest extends UsefulTestCase {
                 "step mine:outer:7 a=5",
                 "step mine:outer:8 a=5,b=11",
                 "step mine:outer[q]:8 a=5,b=11"), seen);
+        assertEquals(List.of(
+                "ok 50",
+                "ok 11",
+                "ok 5 printed hi",
+                "E_UNDEFINED: undefined word 'nope'",
+                "E_SYNTAX: unexpected ':'; expected a word (not a defining keyword)"), evaluated);
         synchronized (console) {
             assertTrue(console.toString(), console.toString().contains("  14\n"));
         }
@@ -125,6 +140,20 @@ public class FLDebugProcessHandlerTest extends UsefulTestCase {
         }
         return o.get("reason").getAsString() + " " + f.get("word").getAsString() + ("quot".equals(f.get("kind").getAsString()) ? "[q]" : "")
                 + ":" + f.get("line").getAsInt() + " " + String.join(",", locals);
+    }
+
+    /** "ok <new values, deepest first> [printed <output>]" or the error of an evaluated event. */
+    private static String evaluation(String event) {
+        var o = com.google.gson.JsonParser.parseString(event).getAsJsonObject();
+        assertEquals("evaluated", o.get("event").getAsString());
+        if (!o.get("ok").getAsBoolean()) return o.get("error").getAsString();
+        List<String> values = new ArrayList<>();
+        var stack = o.getAsJsonArray("stack");
+        for (int i = o.get("kept").getAsInt(); i < stack.size(); i++) {
+            values.add(stack.get(i).getAsJsonObject().get("value").getAsString());
+        }
+        String out = o.get("output").getAsString().strip();
+        return "ok " + String.join(" ", values) + (out.isEmpty() ? "" : " printed " + out);
     }
 
     private static String json(String s) {

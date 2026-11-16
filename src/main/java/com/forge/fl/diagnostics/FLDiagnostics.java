@@ -99,7 +99,9 @@ public final class FLDiagnostics {
     /** All findings for the file, ordered by position; empty for files that are not user FL sources. */
     @NotNull
     public static List<Problem> compute(@NotNull PsiFile psi) {
-        if (!(psi instanceof FLFile file) || FLBuiltins.isBuiltinFile(file)) return List.of();
+        if (!(psi instanceof FLFile file) || FLBuiltins.isBuiltinFile(file) || FLFile.isDebuggerFragment(file)) {
+            return List.of();
+        }
         Checker c = new Checker(file);
         c.run();
         c.out.sort(Comparator.comparingInt(p -> p.range().getStartOffset()));
