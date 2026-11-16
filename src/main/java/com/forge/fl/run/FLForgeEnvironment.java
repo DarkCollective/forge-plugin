@@ -127,9 +127,28 @@ public final class FLForgeEnvironment {
      */
     @NotNull
     public static Path runnerScript() throws IOException {
+        return script("forge-runner.mjs");
+    }
+
+    /** {@code forge-vectors.mjs}, the op vector runner, installed like {@link #runnerScript()}. */
+    @NotNull
+    public static Path vectorsScript() throws IOException {
+        return script("forge-vectors.mjs");
+    }
+
+    /** Whether the packages the vector runner imports are built: worker, recipe, ops (with its checks) and lang. */
+    public static boolean isBuiltForVectors(@NotNull Path checkout) {
+        return isBuilt(checkout)
+                && Files.isRegularFile(checkout.resolve("packages/worker/dist/index.js"))
+                && Files.isRegularFile(checkout.resolve("packages/recipe/dist/index.js"))
+                && Files.isRegularFile(checkout.resolve("packages/ops/dist/checks/index.js"));
+    }
+
+    @NotNull
+    private static Path script(@NotNull String name) throws IOException {
         byte[] raw;
-        try (InputStream in = FLForgeEnvironment.class.getResourceAsStream("/runner/forge-runner.mjs")) {
-            if (in == null) throw new IOException("runner/forge-runner.mjs is missing from the plugin");
+        try (InputStream in = FLForgeEnvironment.class.getResourceAsStream("/runner/" + name)) {
+            if (in == null) throw new IOException("runner/" + name + " is missing from the plugin");
             raw = in.readAllBytes();
         }
         String hash;
@@ -139,7 +158,7 @@ public final class FLForgeEnvironment {
             throw new IOException(e);
         }
         Path dir = Path.of(PathManager.getSystemPath(), "forge-fl", "runner-" + hash);
-        Path script = dir.resolve("forge-runner.mjs");
+        Path script = dir.resolve(name);
         if (Files.isRegularFile(script)
                 && new String(Files.readAllBytes(script), StandardCharsets.UTF_8).equals(new String(raw, StandardCharsets.UTF_8))) {
             return script;

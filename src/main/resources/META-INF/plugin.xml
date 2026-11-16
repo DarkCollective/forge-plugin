@@ -61,6 +61,10 @@
         <runLineMarkerContributor language="FL" implementationClass="com.forge.fl.run.FLRunLineMarkerContributor"/>
         <programRunner implementation="com.forge.fl.debug.FLDebugRunner"/>
         <xdebugger.breakpointType implementation="com.forge.fl.debug.FLLineBreakpointType"/>
+        <configurationType implementation="com.forge.fl.vectors.FLVectorsConfigurationType"/>
+        <runConfigurationProducer implementation="com.forge.fl.vectors.FLVectorsConfigurationProducer"/>
+        <!-- By language id: the JSON language comes from the platform or the bundled JSON plugin; no class of it is used. -->
+        <runLineMarkerContributor language="JSON" implementationClass="com.forge.fl.vectors.FLVectorsLineMarkerContributor"/>
         <intentionAction>
             <className>com.forge.fl.intentions.FLMoveMetaBlockIntention</className>
             <category>FL</category>

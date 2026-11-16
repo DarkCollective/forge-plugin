@@ -87,9 +87,12 @@ public class FLRunTest extends FLTestBase {
         RunLineMarkerContributor c = new FLRunLineMarkerContributor();
         RunLineMarkerContributor.Info info = c.getInfo(def.getNameIdentifier());
         assertNotNull(info);
-        assertEquals(2, info.actions.length);
         assertEquals("Run 'demo:g'…", info.actions[0].getTemplatePresentation().getText());
         assertEquals("Debug 'demo:g'…", info.actions[1].getTemplatePresentation().getText());
+        // then one action per executor for what producers offer (an op's vectors); hidden where none applies
+        for (int i = 2; i < info.actions.length; i++) {
+            assertTrue(info.actions[i].getClass().getName(), info.actions[i].getClass().getName().startsWith(com.intellij.execution.lineMarker.ExecutorAction.class.getName()));
+        }
         PsiElement ref = PsiTreeUtil.findChildrenOfType(def, com.forge.fl.psi.FLWordRef.class).iterator().next();
         assertNull(c.getInfo(ref.getFirstChild() == null ? ref : ref.getFirstChild()));
         assertNull(c.getInfo(def.getFirstChild()));

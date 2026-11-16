@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (op test vectors)
+- The **FL Vectors** run configuration: runs the op test vectors and check pairs of `packages/ops/vocab/*.test.json` in
+  the test runner window, grouped by file and op, with diffs of expected and actual values, navigation to the JSON
+  entry and to the op, and Rerun Failed Tests. A whole file also gets a `coverage` test with the CI rules.
+- Ways to run: ▶ icons in vectors files (the file, each entry with its last result), *Run '<op> vectors'* in the ▶
+  menu of a word, and *Run* on a vectors file, a vocabulary's `.fth` file or the `vocab` directory
+  (`FLVectorsConfigurationProducer`). The icons are registered for the JSON language by id; no JSON plugin class is
+  used.
+- `forge-vectors.mjs`: uses `runOpVectors` of `@forge/worker` for the verdict, one vector at a time, and prints
+  TeamCity service messages.
+- `FLVectorsTest`: entry scanning, the configuration, Rerun Failed, the producer, locations, the gutter icons, and
+  (with `-Dfl.forge`) the runner against Forge and against a copy with broken vectors, parsed by the platform's test
+  event converter.
+
 ### Added (Set Value while debugging)
 - Set Value on locals of any frame and on data stack entries of a paused FL debug session. The new value is an FL
   expression evaluated in the frame that must leave exactly one value; a header input keeps its declared type and

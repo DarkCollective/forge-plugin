@@ -64,6 +64,7 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   `IN:` offer vocabulary names
 - color settings page for FL syntax colors
 - running and debugging FL code and words with the Forge engine (see *Running FL* and *Debugging FL* below)
+- running the op test vectors in the test runner window (see *Op test vectors* below)
 
 ## Running FL
 
@@ -138,6 +139,34 @@ Under the hood the runner keeps stdin open in debug mode: the plugin sends comma
 `resume`, `stepOver`, `stepInto`, `stepOut`, `pause`, `stop`, `evaluate`, `setValue`), one JSON line each, and the
 runner answers with `ready`, `paused` (frames, locals, stack), `resumed`, `evaluated` and `valueSet` events on stdout lines that start with `\u0001FL-DEBUG `, which
 the plugin takes out of the console. The protocol is described at the top of `forge-runner.mjs`.
+
+## Op test vectors
+
+The op test vectors of a Forge checkout (`packages/ops/vocab/<vocab>.test.json`, RECIPES.md §9) run in the IDE's test
+runner window: one node per file (the vocabulary), one per op, one per entry (`#3 encode RFC 4648 §10 'foo'`), with
+the time each took. A failed vector shows Forge's reason and a diff of the expected and the actual value (as text
+when both are text, otherwise as hex; JSON pretty-printed; an error code and its path). Double-click goes to the entry
+in the JSON file; on an op node, to the op's definition. *Rerun Failed Tests* runs only the failed entries.
+
+Ways to run:
+
+- the ▶ on the opening `[` of a vectors file (all of it) and on each entry, which also shows the entry's last result;
+- the ▶ menu of a word in a bundled vocabulary: *Run 'base32:encode vectors'*, when its file has vectors for it;
+- *Run* in the context menu of a vectors file, an `.fth` file of `packages/ops/vocab` (its vocabulary's vectors), or
+  the `vocab` directory itself (all files);
+- the **FL Vectors** run configuration: checkout, Node.js, files (default all), an op (an alias works) and entries
+  (`base32.test.json:0,3`).
+
+The verdict is Forge's own: `runOpVectors` of `@forge/worker`, the harness of its Vitest suite, run on one vector at a
+time against a baker built from the files on disk (TypeScript primitives from the last build). Check pairs (entries
+with `checks`) are evaluated with `evaluateChecks` of `@forge/ops/checks`, as `checks-pairs.test.ts` does. A whole
+file ends with a `coverage` test that applies the CI rules to its vocabulary: every op has a vector; an op with input
+checks has a pass and a fail input pair; one with output checks has a pass output pair. All 201 files (about 7,800
+tests) take some 15 seconds.
+
+Under the hood the plugin starts `node forge-vectors.mjs` (bundled, like the run/debug runner) with the request on
+stdin; the runner prints TeamCity service messages. Locations are `flvectors://<file>`, `flop://<vocab:op>` and
+`flvector://<file>#<index>`. It needs the checkout's `worker`, `recipe`, `ops` and `lang` packages built.
 
 ## Built-in words
 

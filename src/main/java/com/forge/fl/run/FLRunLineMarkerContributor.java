@@ -5,7 +5,9 @@ import com.forge.fl.builtins.FLBuiltins;
 import com.forge.fl.psi.FLDefinition;
 import com.intellij.execution.executors.DefaultDebugExecutor;
 import com.intellij.execution.executors.DefaultRunExecutor;
+import com.intellij.execution.lineMarker.ExecutorAction;
 import com.intellij.execution.lineMarker.RunLineMarkerContributor;
+import com.intellij.util.ArrayUtil;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.psi.PsiElement;
@@ -20,9 +22,10 @@ public final class FLRunLineMarkerContributor extends RunLineMarkerContributor {
         if (!(element.getParent() instanceof FLDefinition def) || def.getNameIdentifier() != element) return null;
         if (def.getName() == null || FLBuiltins.isBuiltin(def)) return null;
         String qname = FLRunInputs.qualifiedName(def);
-        AnAction[] actions = {
+        // Then what run configuration producers offer here: the op's test vectors for a word of a bundled vocabulary.
+        AnAction[] actions = ArrayUtil.mergeArrays(new AnAction[]{
                 new FLRunWordAction(def, DefaultRunExecutor.getRunExecutorInstance()),
-                new FLRunWordAction(def, DefaultDebugExecutor.getDebugExecutorInstance())};
+                new FLRunWordAction(def, DefaultDebugExecutor.getDebugExecutorInstance())}, ExecutorAction.getActions(1));
         return new Info(AllIcons.RunConfigurations.TestState.Run, actions, e -> "Run or debug " + qname);
     }
 }
