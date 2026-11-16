@@ -9,6 +9,7 @@ import com.forge.fl.psi.FLParameter;
 import com.forge.fl.psi.FLScope;
 import com.forge.fl.psi.FLWordRef;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.Document;
@@ -22,6 +23,7 @@ import com.intellij.psi.PsiManager;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
+import com.intellij.xdebugger.frame.XValueModifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,11 +43,14 @@ final class FLEvaluator extends XDebuggerEvaluator {
 
         @NotNull
         Project project();
+
+        /** A value was set ({@code valueSet} event, ok): refresh the paused frames before the views are rebuilt. */
+        void valueChanged(@NotNull JsonObject valueSet);
     }
 
     private final Backend backend;
     private final int frameIndex;
-    private final FLStackFrame.Info info;
+    private volatile FLStackFrame.Info info;
     private final @Nullable XSourcePosition position;
 
     FLEvaluator(@NotNull Backend backend, int frameIndex, @NotNull FLStackFrame.Info info, @Nullable XSourcePosition position) {
@@ -53,6 +58,53 @@ final class FLEvaluator extends XDebuggerEvaluator {
         this.frameIndex = frameIndex;
         this.info = info;
         this.position = position;
+    }
+
+    /** The frame's values after a Set Value. */
+    void update(@NotNull FLStackFrame.Info info) {
+        this.info = info;
+    }
+
+    /**
+     * Set Value: evaluates {@code expression} in this frame (exactly one new value) and stores it in {@code target},
+     * a local of this frame or an entry of the data stack.
+     */
+    void setValue(@NotNull String expression, @NotNull FLValue target, @NotNull XValueModifier.XModificationCallback callback) {
+        String expr = expression.strip();
+        if (expr.isEmpty()) {
+            callback.errorOccurred("Nothing to evaluate");
+            return;
+        }
+        JsonObject c = setValueCommand(expr, target);
+        backend.evaluate(c).whenComplete((event, error) -> {
+            if (error != null) {
+                Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+                callback.errorOccurred(cause.getMessage() == null ? cause.toString() : cause.getMessage());
+                return;
+            }
+            if (!event.has("ok") || !event.get("ok").getAsBoolean()) {
+                JsonElement e = event.get("error");
+                callback.errorOccurred(e == null || e.isJsonNull() ? "The value could not be set" : e.getAsString());
+                return;
+            }
+            backend.valueChanged(event);
+            callback.valueModified();
+        });
+    }
+
+    /** The {@code setValue} command for {@code target}. */
+    @NotNull
+    JsonObject setValueCommand(@NotNull String expr, @NotNull FLValue target) {
+        JsonObject c = command(expr);
+        c.addProperty("cmd", "setValue");
+        if (target.isStackEntry()) {
+            c.addProperty("target", "stack");
+            c.addProperty("index", target.stackIndex());
+        } else {
+            c.addProperty("target", "local");
+            c.addProperty("name", target.getName());
+        }
+        return c;
     }
 
     @Override

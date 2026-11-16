@@ -25,9 +25,9 @@ final class FLStackFrame extends XStackFrame {
                 List<FLValue> locals) {
     }
 
-    private final Info info;
+    private volatile Info info;
     private final @Nullable XSourcePosition position;
-    private final @Nullable List<FLValue> stack;
+    private volatile @Nullable List<FLValue> stack;
     private final @Nullable XDebuggerEvaluator evaluator;
 
     FLStackFrame(@NotNull Info info, @Nullable XSourcePosition position, @Nullable List<FLValue> stack) {
@@ -44,6 +44,17 @@ final class FLStackFrame extends XStackFrame {
 
     Info info() {
         return info;
+    }
+
+    /** The values after a Set Value: same activation, new locals and (innermost frame) new stack. */
+    void update(@NotNull Info info, @Nullable List<FLValue> stack) {
+        this.info = info;
+        if (this.stack != null && stack != null) this.stack = stack;
+    }
+
+    @Nullable
+    List<FLValue> stack() {
+        return stack;
     }
 
     @Nullable
@@ -71,8 +82,10 @@ final class FLStackFrame extends XStackFrame {
     @Override
     public void computeChildren(@NotNull XCompositeNode node) {
         XValueChildrenList children = new XValueChildrenList();
-        for (FLValue v : info.locals()) children.add(v);
-        if (stack != null) children.addTopGroup(new StackGroup(stack));
+        Info shown = info;
+        List<FLValue> values = stack;
+        for (FLValue v : shown.locals()) children.add(v);
+        if (values != null) children.addTopGroup(new StackGroup(values));
         node.addChildren(children, true);
     }
 

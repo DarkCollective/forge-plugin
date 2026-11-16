@@ -27,10 +27,15 @@
 //     into the paused frames, 0 the innermost) bound by name, the program's variables, and the scope given (vocab
 //     defaults to the frame word's vocabulary, using to none). The expression is compiled as the body of a
 //     throwaway word whose transaction is rolled back, so it cannot define anything. Answered by "evaluated".
+//   {"cmd":"setValue","id":8,"expr":"42","frame":0,"target":"local","name":"n",...}   while paused
+//   {"cmd":"setValue","id":9,"expr":"\"x\"","frame":0,"target":"stack","index":0,...}  index deepest first
+//     Evaluates `expr` as "evaluate" does (same fields for the scope); it must leave exactly one new value and take
+//     none. That value replaces the local or the stack entry. Answered by "valueSet". Needs a Forge whose
+//     @forge/lang has StepEvent.setStackItem and DebugFrame.setLocal; "paused" says so in "canSetValues".
 // Evaluation sees and may change the program's variables; it has its own step and time limits (EVAL_LIMITS).
 // Events are stdout lines that start with the marker below, followed by one JSON object:
 //   {"event":"ready"}
-//   {"event":"paused","reason":"breakpoint"|"step"|"pause","frames":[...],"stack":[...]}
+//   {"event":"paused","reason":"breakpoint"|"step"|"pause","frames":[...],"stack":[...],"canSetValues":true}
 //     frames innermost first: {"word","kind":"word"|"quot","unit"|null,"line"|null,"col"|null,"locals":[...]}
 //     locals and stack entries: {"name"?,"type","value"} with the value as its repr (secrets redacted);
 //     "stack" is deepest first. "locals" is empty when the engine has no StepEvent.frames().
@@ -40,6 +45,8 @@
 //     "kept" entries are those of the paused stack it left in place (so stack.length - kept values are new), and
 //     "consumed" paused entries above them were taken by the expression. The paused program's stack is unchanged.
 //   {"event":"evaluated","id":7,"ok":false,"error":"E_UNDEFINED: undefined word 'x'","output":"..."}
+//   {"event":"valueSet","id":8,"ok":true,"frames":[...],"stack":[...]}   frames and stack after the change
+//   {"event":"valueSet","id":8,"ok":false,"error":"E_TYPE: ..."}       nothing changed
 // A step stops only in code that has a source unit (not in <console> code or the core prelude).
 
 import { existsSync, readFileSync } from "node:fs";
@@ -241,6 +248,8 @@ async function main() {
     else if (cmd.cmd === "stop") dbg.stopRequested = true;
     else if (cmd.cmd === "evaluate") {
       send({ event: "evaluated", id: cmd.id ?? null, ok: false, error: "the program is running", output: "" });
+    } else if (cmd.cmd === "setValue") {
+      send({ event: "valueSet", id: cmd.id ?? null, ok: false, error: "the program is running" });
     }
   }
 
@@ -252,16 +261,14 @@ async function main() {
   }
 
   /**
-   * Evaluates `cmd.expr` while paused at `ev`, `rawFrames` being ev.frames() (still valid: the VM waits for the
-   * hook). Never throws; the answer is an "evaluated" event.
+   * Runs `cmd.expr` while paused at `ev`, `rawFrames` being ev.frames() (still valid: the VM waits for the hook).
+   * Never throws: {ok:false, error, output} or {ok:true, result, base, kept, output}.
    */
-  async function evaluate(cmd, ev, rawFrames) {
-    const id = cmd.id ?? null;
-    const answer = (fields) => send({ event: "evaluated", id, ...fields });
+  async function runExpression(cmd, ev, rawFrames) {
     const expr = typeof cmd.expr === "string" ? cmd.expr : "";
-    if (expr.trim() === "") return answer({ ok: false, error: "nothing to evaluate", output: "" });
+    if (expr.trim() === "") return { ok: false, error: "nothing to evaluate", output: "" };
     if (typeof lang.compile !== "function" || typeof lang.runVm !== "function") {
-      return answer({ ok: false, error: "this Forge build cannot evaluate expressions (no compile/runVm in @forge/lang)", output: "" });
+      return { ok: false, error: "this Forge build cannot evaluate expressions (no compile/runVm in @forge/lang)", output: "" };
     }
     const frame = rawFrames[Number.isInteger(cmd.frame) ? cmd.frame : 0] ?? rawFrames[0] ?? null;
     const locals = frame?.locals ?? [];
@@ -297,14 +304,72 @@ async function main() {
         scope,
       });
     } catch (e) {
-      return answer({ ok: false, error: evalError(e), output: "" });
+      return { ok: false, error: evalError(e), output: "" };
     }
     const output = result.output ?? "";
-    if (!result.ok) return answer({ ok: false, error: evalError(result.error), output });
+    if (!result.ok) return { ok: false, error: evalError(result.error), output };
     let kept = 0;
     while (kept < base.length && kept < result.stack.length && result.stack[kept] === base[kept]) kept++;
-    const stack = result.stack.map((v) => ({ type: v.tag, value: showShort(v) }));
-    return answer({ ok: true, stack, kept, consumed: base.length - kept, output });
+    return { ok: true, result, base, kept, output };
+  }
+
+  /** The "evaluate" command: answered by an "evaluated" event. */
+  async function evaluate(cmd, ev, rawFrames) {
+    const id = cmd.id ?? null;
+    const r = await runExpression(cmd, ev, rawFrames);
+    if (!r.ok) return send({ event: "evaluated", id, ok: false, error: r.error, output: r.output });
+    const stack = r.result.stack.map((v) => ({ type: v.tag, value: showShort(v) }));
+    return send({ event: "evaluated", id, ok: true, stack, kept: r.kept, consumed: r.base.length - r.kept, output: r.output });
+  }
+
+  /** Whether this engine can change values while paused (StepEvent.setStackItem, DebugFrame.setLocal). */
+  function canSetValues(ev) {
+    return typeof ev.setStackItem === "function";
+  }
+
+  /**
+   * The "setValue" command: evaluates `cmd.expr` like "evaluate", which must leave exactly one new value and take
+   * none, and stores it in the local `cmd.name` of frame `cmd.frame` (target "local") or in entry `cmd.index` of the
+   * data stack, deepest first (target "stack"). Answered by "valueSet" with the frames and stack after the change.
+   * Returns the new ev.frames() when a value changed, otherwise null.
+   */
+  async function setValue(cmd, ev, rawFrames) {
+    const id = cmd.id ?? null;
+    const fail = (error) => {
+      send({ event: "valueSet", id, ok: false, error });
+      return null;
+    };
+    if (!canSetValues(ev)) return fail("this Forge build cannot change values (no StepEvent.setStackItem in @forge/lang)");
+    const r = await runExpression(cmd, ev, rawFrames);
+    if (!r.ok) return fail(r.error + (r.output === "" ? "" : `\nprinted: ${r.output.trim()}`));
+    const added = r.result.stack.length - r.kept;
+    const taken = r.base.length - r.kept;
+    if (added !== 1 || taken !== 0) {
+      return fail(`the new value must be exactly one value; the expression left ${added} and took ${taken} from the stack`);
+    }
+    const value = r.result.stack[r.result.stack.length - 1];
+    try {
+      if (cmd.target === "stack") {
+        ev.setStackItem(cmd.index, value);
+      } else if (cmd.target === "local") {
+        const frame = rawFrames[Number.isInteger(cmd.frame) ? cmd.frame : 0];
+        if (frame === undefined) return fail(`no frame ${cmd.frame}`);
+        frame.setLocal(cmd.name, value);
+      } else {
+        return fail(`unknown target ${JSON.stringify(cmd.target)}`);
+      }
+    } catch (e) {
+      return fail(evalError(e));
+    }
+    const frames = ev.frames();
+    send({
+      event: "valueSet",
+      id,
+      ok: true,
+      frames: frames.map(frameInfo),
+      stack: Array.from(ev.stack, (v) => ({ type: v.tag, value: showShort(v) })),
+    });
+    return frames;
   }
 
   /** "CODE: message" of an evaluation error; positions are left out (they point into the wrapped source). */
@@ -331,10 +396,10 @@ async function main() {
     const frames = typeof ev.frames === "function"
       ? ev.frames().map(frameInfo)
       : [frameInfo({ word: ev.word, kind: "word", pos: ev.pos, locals: [] })];
-    const rawFrames = typeof ev.frames === "function" ? ev.frames() : [];
+    let rawFrames = typeof ev.frames === "function" ? ev.frames() : [];
     const stack = Array.from(ev.stack, (v) => ({ type: v.tag, value: showShort(v) }));
     dbg.pauseRequested = false;
-    send({ event: "paused", reason, frames, stack });
+    send({ event: "paused", reason, frames, stack, canSetValues: canSetValues(ev) });
     for (;;) {
       const line = await nextLine();
       if (line === null) return "stop";
@@ -346,6 +411,9 @@ async function main() {
           continue;
         case "evaluate":
           await evaluate(cmd, ev, rawFrames);
+          continue;
+        case "setValue":
+          rawFrames = (await setValue(cmd, ev, rawFrames)) ?? rawFrames;
           continue;
         case "resume":
         case "stepOver":

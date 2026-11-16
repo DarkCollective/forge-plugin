@@ -66,11 +66,19 @@ final class FLDebugProcess extends XDebugProcess {
     /** Evaluations sent to the runner and not answered yet, by id. */
     private final Map<Integer, CompletableFuture<JsonObject>> evaluations = new ConcurrentHashMap<>();
     private final AtomicInteger nextEvaluation = new AtomicInteger(1);
+    /** The context of the current pause, or null. */
+    private volatile @Nullable FLSuspendContext current;
     private final FLEvaluator.Backend backend = new FLEvaluator.Backend() {
         @NotNull
         @Override
         public CompletableFuture<JsonObject> evaluate(@NotNull JsonObject command) {
             return FLDebugProcess.this.evaluate(command);
+        }
+
+        @Override
+        public void valueChanged(@NotNull JsonObject valueSet) {
+            FLSuspendContext context = current;
+            if (context != null) refresh(context, valueSet);
         }
 
         @NotNull
@@ -98,7 +106,7 @@ final class FLDebugProcess extends XDebugProcess {
 
     // ---- evaluation -----------------------------------------------------------------------------------------
 
-    /** Sends an {@code evaluate} command; completes with the runner's {@code evaluated} event. */
+    /** Sends an {@code evaluate} or {@code setValue} command; completes with the runner's answer event. */
     private CompletableFuture<JsonObject> evaluate(JsonObject command) {
         int id = nextEvaluation.getAndIncrement();
         command.addProperty("id", id);
@@ -268,7 +276,7 @@ final class FLDebugProcess extends XDebugProcess {
             return;
         }
         String kind = str(event, "event");
-        if ("evaluated".equals(kind)) {
+        if ("evaluated".equals(kind) || "valueSet".equals(kind)) {
             JsonElement id = event.get("id");
             CompletableFuture<JsonObject> f = id == null || id.isJsonNull() ? null : evaluations.remove(id.getAsInt());
             if (f != null) f.complete(event);
@@ -277,6 +285,7 @@ final class FLDebugProcess extends XDebugProcess {
         if (!"paused".equals(kind)) return;
         FLSuspendContext context = ApplicationManager.getApplication().runReadAction(
                 (Computable<FLSuspendContext>) () -> suspendContext(event, files, backend));
+        current = context;
         String reason = str(event, "reason");
         FLStackFrame.Info top = context.frames().isEmpty() ? null : context.frames().get(0).info();
         if (runToTarget != null) {
@@ -309,35 +318,74 @@ final class FLDebugProcess extends XDebugProcess {
     /** The frames of a paused event (innermost first) with their source positions; each evaluates through {@code backend}. */
     static FLSuspendContext suspendContext(@NotNull JsonObject event, @NotNull FLUnitFiles files,
                                            @Nullable FLEvaluator.Backend backend) {
+        boolean canSet = backend != null && event.has("canSetValues") && event.get("canSetValues").getAsBoolean();
+        List<FLStackFrame> frames = new ArrayList<>();
+        JsonArray framesJson = event.getAsJsonArray("frames");
+        if (framesJson != null) {
+            for (JsonElement e : framesJson) {
+                FLStackFrame.Info info = info(e.getAsJsonObject());
+                XSourcePosition position = position(info, files);
+                FLEvaluator evaluator = backend == null ? null : new FLEvaluator(backend, frames.size(), info, position);
+                List<FLValue> stack = frames.isEmpty() ? stackValues(event) : null;
+                if (canSet && evaluator != null) attachModifiers(evaluator, info, stack);
+                frames.add(new FLStackFrame(info, position, stack, evaluator));
+            }
+        }
+        return new FLSuspendContext(frames);
+    }
+
+    /** The data stack of a paused or valueSet event, top first ({@code [0]} is the top). */
+    private static List<FLValue> stackValues(JsonObject event) {
         List<FLValue> stack = new ArrayList<>();
         JsonArray stackJson = event.getAsJsonArray("stack");
         if (stackJson != null) {
             for (int i = stackJson.size() - 1, k = 0; i >= 0; i--, k++) {
                 JsonObject v = stackJson.get(i).getAsJsonObject();
-                stack.add(new FLValue("[" + k + "]", str(v, "type"), str(v, "value")));
+                stack.add(new FLValue("[" + k + "]", str(v, "type"), str(v, "value"), i));
             }
         }
-        List<FLStackFrame> frames = new ArrayList<>();
+        return stack;
+    }
+
+    private static FLStackFrame.Info info(JsonObject f) {
+        List<FLValue> locals = new ArrayList<>();
+        JsonArray localsJson = f.getAsJsonArray("locals");
+        if (localsJson != null) {
+            for (JsonElement l : localsJson) {
+                JsonObject o = l.getAsJsonObject();
+                locals.add(new FLValue(str(o, "name"), str(o, "type"), str(o, "value")));
+            }
+        }
+        return new FLStackFrame.Info(str(f, "word"), "quot".equals(str(f, "kind")),
+                nullableStr(f, "unit"), integer(f, "line"), integer(f, "col"), locals);
+    }
+
+    /** Set Value on the frame's locals and, on the innermost frame, the stack entries. */
+    private static void attachModifiers(FLEvaluator evaluator, FLStackFrame.Info info, @Nullable List<FLValue> stack) {
+        for (FLValue v : info.locals()) v.setModifier(evaluator);
+        if (stack != null) {
+            for (FLValue v : stack) v.setModifier(evaluator);
+        }
+    }
+
+    /**
+     * A value was set: the {@code valueSet} event holds the frames and the stack after the change. The paused
+     * context keeps its frames (and the selection); their values are replaced, then the views are rebuilt.
+     */
+    static void refresh(@NotNull FLSuspendContext context, @NotNull JsonObject event) {
         JsonArray framesJson = event.getAsJsonArray("frames");
-        if (framesJson != null) {
-            for (JsonElement e : framesJson) {
-                JsonObject f = e.getAsJsonObject();
-                List<FLValue> locals = new ArrayList<>();
-                JsonArray localsJson = f.getAsJsonArray("locals");
-                if (localsJson != null) {
-                    for (JsonElement l : localsJson) {
-                        JsonObject o = l.getAsJsonObject();
-                        locals.add(new FLValue(str(o, "name"), str(o, "type"), str(o, "value")));
-                    }
-                }
-                FLStackFrame.Info info = new FLStackFrame.Info(str(f, "word"), "quot".equals(str(f, "kind")),
-                        nullableStr(f, "unit"), integer(f, "line"), integer(f, "col"), locals);
-                XSourcePosition position = position(info, files);
-                FLEvaluator evaluator = backend == null ? null : new FLEvaluator(backend, frames.size(), info, position);
-                frames.add(new FLStackFrame(info, position, frames.isEmpty() ? stack : null, evaluator));
+        List<FLStackFrame> frames = context.frames();
+        if (framesJson == null) return;
+        for (int i = 0; i < frames.size() && i < framesJson.size(); i++) {
+            FLStackFrame frame = frames.get(i);
+            FLStackFrame.Info info = info(framesJson.get(i).getAsJsonObject());
+            List<FLValue> stack = i == 0 ? stackValues(event) : null;
+            if (frame.getEvaluator() instanceof FLEvaluator evaluator) {
+                attachModifiers(evaluator, info, stack);
+                evaluator.update(info);
             }
+            frame.update(info, stack);
         }
-        return new FLSuspendContext(frames);
     }
 
     @Nullable

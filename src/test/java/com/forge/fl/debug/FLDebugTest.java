@@ -18,6 +18,7 @@ import com.intellij.xdebugger.XSourcePosition;
 import com.intellij.xdebugger.evaluation.EvaluationMode;
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator;
 import com.intellij.xdebugger.frame.XValue;
+import com.intellij.xdebugger.frame.XValueModifier;
 import com.intellij.xdebugger.impl.breakpoints.XExpressionImpl;
 import org.jetbrains.annotations.NotNull;
 
@@ -97,6 +98,13 @@ public class FLDebugTest extends FLTestBase {
         @Override
         public Project project() {
             return getProject();
+        }
+
+        final List<JsonObject> changed = new ArrayList<>();
+
+        @Override
+        public void valueChanged(JsonObject valueSet) {
+            changed.add(valueSet);
         }
     }
 
@@ -210,5 +218,102 @@ public class FLDebugTest extends FLTestBase {
         assertTrue(fragment instanceof FLFile);
         assertTrue(FLFile.isDebuggerFragment(fragment));
         assertEquals(List.of(), FLDiagnostics.compute(fragment));
+    }
+
+    private static final String PAUSED = """
+            {"event":"paused","reason":"step","canSetValues":%s,
+             "frames":[{"word":"mine:inner","kind":"word","unit":"mine.fth","line":6,"col":3,
+                        "locals":[{"name":"n","type":"int","value":"5"},{"name":"d","type":"int","value":"10"}]},
+                       {"word":"mine:outer","kind":"word","unit":"mine.fth","line":9,"col":5,
+                        "locals":[{"name":"a","type":"int","value":"5"}]}],
+             "stack":[{"type":"int","value":"1"},{"type":"str","value":"\\"top\\""}]}
+            """;
+
+    public void testSetValueOnlyWhenTheEngineCan() {
+        myFixture.addFileToProject("mine.fth", MINE);
+        FLUnitFiles files = new FLUnitFiles(getProject(), null, List.of());
+        FakeBackend backend = new FakeBackend();
+        FLSuspendContext without = FLDebugProcess.suspendContext(
+                JsonParser.parseString(PAUSED.formatted("false")).getAsJsonObject(), files, backend);
+        assertNull(without.frames().get(0).info().locals().get(0).getModifier());
+        assertNull(without.frames().get(0).stack().get(0).getModifier());
+        FLSuspendContext with = FLDebugProcess.suspendContext(
+                JsonParser.parseString(PAUSED.formatted("true")).getAsJsonObject(), files, backend);
+        FLStackFrame inner = with.frames().get(0);
+        assertNotNull(inner.info().locals().get(1).getModifier());
+        assertNotNull(with.frames().get(1).info().locals().get(0).getModifier());
+        // the stack is shown top first; the runner indexes it deepest first
+        FLValue top = inner.stack().get(0);
+        assertEquals("[0]", top.getName());
+        assertEquals("\"top\"", top.value());
+        assertEquals(1, top.stackIndex());
+        assertEquals(0, inner.stack().get(1).stackIndex());
+        assertEquals("\"top\"", top.initialEditorText());
+        assertNull(new FLValue("k", "bytes", "<redacted>").initialEditorText());
+        assertNull(new FLValue("k", "str", "x".repeat(1000)).initialEditorText());
+    }
+
+    public void testSetValueCommandsAndRefresh() {
+        PsiFile f = myFixture.addFileToProject("mine.fth", MINE);
+        FLUnitFiles files = new FLUnitFiles(getProject(), null, List.of());
+        FakeBackend backend = new FakeBackend();
+        FLSuspendContext ctx = FLDebugProcess.suspendContext(
+                JsonParser.parseString(PAUSED.formatted("true")).getAsJsonObject(), files, backend);
+        FLStackFrame inner = ctx.frames().get(0);
+        FLEvaluator evaluator = (FLEvaluator) inner.getEvaluator();
+        assertNotNull(evaluator);
+        JsonObject local = evaluator.setValueCommand("42", inner.info().locals().get(1));
+        assertEquals("setValue", local.get("cmd").getAsString());
+        assertEquals("local", local.get("target").getAsString());
+        assertEquals("d", local.get("name").getAsString());
+        assertEquals(0, local.get("frame").getAsInt());
+        assertEquals("mine", local.get("vocab").getAsString());
+        JsonObject stack = evaluator.setValueCommand("\"x\"", inner.stack().get(0));
+        assertEquals("stack", stack.get("target").getAsString());
+        assertEquals(1, stack.get("index").getAsInt());
+        assertEquals(1, ((FLEvaluator) ctx.frames().get(1).getEvaluator()).setValueCommand("7", ctx.frames().get(1).info().locals().get(0))
+                .get("frame").getAsInt());
+
+        // a refused value: the error, nothing refreshed
+        backend.answer = JsonParser.parseString("{\"event\":\"valueSet\",\"ok\":false,\"error\":\"E_TYPE: expected int, got str\"}").getAsJsonObject();
+        assertEquals("error: E_TYPE: expected int, got str", setValue(evaluator, inner.info().locals().get(0), "\"x\""));
+        assertTrue(backend.changed.isEmpty());
+
+        // a set value: the backend is told, then the frames show the new values and keep their modifiers
+        backend.answer = JsonParser.parseString("""
+                {"event":"valueSet","ok":true,
+                 "frames":[{"word":"mine:inner","kind":"word","unit":"mine.fth","line":6,"col":3,
+                            "locals":[{"name":"n","type":"int","value":"5"},{"name":"d","type":"int","value":"42"}]},
+                           {"word":"mine:outer","kind":"word","unit":"mine.fth","line":9,"col":5,
+                            "locals":[{"name":"a","type":"int","value":"5"}]}],
+                 "stack":[{"type":"int","value":"1"},{"type":"str","value":"\\"top\\""}]}
+                """).getAsJsonObject();
+        assertEquals("modified", setValue(evaluator, inner.info().locals().get(1), "42"));
+        assertEquals(1, backend.changed.size());
+        FLDebugProcess.refresh(ctx, backend.changed.get(0));
+        assertSame(inner, ctx.frames().get(0));
+        assertEquals("42", inner.info().locals().get(1).value());
+        assertNotNull(inner.info().locals().get(1).getModifier());
+        assertNotNull(inner.stack().get(0).getModifier());
+        // the evaluator answers a local from the new values
+        assertEquals("42", ((FLValue) evaluate(evaluator, "d")).value());
+        assertNotNull(f);
+    }
+
+    /** Set Value synchronously (the fake backend completes at once): "modified" or "error: ...". */
+    private static String setValue(FLEvaluator evaluator, FLValue target, String expr) {
+        String[] out = new String[1];
+        evaluator.setValue(expr, target, new XValueModifier.XModificationCallback() {
+            @Override
+            public void valueModified() {
+                out[0] = "modified";
+            }
+
+            @Override
+            public void errorOccurred(@NotNull String errorMessage) {
+                out[0] = "error: " + errorMessage;
+            }
+        });
+        return out[0];
     }
 }

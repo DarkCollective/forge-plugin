@@ -5,6 +5,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (Set Value while debugging)
+- Set Value on locals of any frame and on data stack entries of a paused FL debug session. The new value is an FL
+  expression evaluated in the frame that must leave exactly one value; a header input keeps its declared type and
+  constraint. The frames are refreshed in place, so the selected frame stays selected.
+- The runner's `setValue` command and `valueSet` event (with the frames and stack after the change), and
+  `canSetValues` on `paused`. They use `StepEvent.setStackItem` and `DebugFrame.setLocal`, additive `@forge/lang`
+  APIs; with a Forge without them, no value offers Set Value.
+- Tests: `FLDebugTest` (modifiers only when the engine can, commands, refresh) and `testRunnerSetValue` in
+  `FLDebugProcessHandlerTest` (with `-Dfl.forge`; skipped against a Forge without the setters).
+
 ### Added (evaluating FL while debugging)
 - Evaluate Expression, watches and hover in a paused FL debug session. The expression is body code of the selected
   frame: its locals by name, a copy of the paused data stack, the program's variables, and the frame's `IN:` and
