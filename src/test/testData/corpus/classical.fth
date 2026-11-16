@@ -3,13 +3,11 @@
 IN: classical
 
 : _rot-code ( code:int amount:int -- int )
-  code 65 90 util:between?
-  [ code 65 - amount + 26 mod 65 + ]
-  [ code 97 122 util:between?
-    [ code 97 - amount + 26 mod 97 + ]
+  {
+    [ code 65 90 between? ] [ code 65 - amount + 26 mod 65 + ]
+    [ code 97 122 between? ] [ code 97 - amount + 26 mod 97 + ]
     [ code ]
-    if ]
-  if ;
+  } cond ;
 
 : rot ( bytes amount:int[0..25]=13 -- bytes )
   "Rotate each ASCII letter by a fixed amount; other bytes pass through." doc
@@ -18,11 +16,11 @@ IN: classical
 
 META: rot
   use-when "You have a text that looks like scrambled letters, such as a spoiler or a puzzle, and want to try a fixed shift of its letters. ROT13 is the default shift." ;
-  link "https://en.wikipedia.org/wiki/ROT13" "ROT13 on Wikipedia" ;
-  link "https://en.wikipedia.org/wiki/Caesar_cipher" "Caesar cipher on Wikipedia" ;
   param amount "Shift (13 = ROT13)" ;
   alias rot13 ;
   see-also classical:atbash ;
+  link "https://en.wikipedia.org/wiki/ROT13" "ROT13 on Wikipedia" ;
+  link "https://en.wikipedia.org/wiki/Caesar_cipher" "Caesar cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -37,7 +35,7 @@ META: rot
 \ ---------------------------------------------------------------------------------------------
 
 : _rot47-code ( code:int amount:int -- int )
-  code 33 126 util:between? [ code 33 - amount + 94 mod 33 + ] [ code ] if ;
+  code 33 126 between? [ code 33 - amount + 94 mod 33 + ] [ code ] if ;
 
 : rot47 ( bytes -- bytes )
   "Rotate the printable ASCII bytes 33 ('!') to 126 ('~') by 47 places; all other bytes pass through. Applying it twice gives the original." doc
@@ -51,13 +49,11 @@ META: rot47
 
 \ Not morse:_upper-cp: this reflects a letter within its case, it does not change the case.
 : _atbash-code ( code:int -- int )
-  code 65 90 util:between?
-  [ 155 code - ]
-  [ code 97 122 util:between?
-    [ 219 code - ]
+  {
+    [ code 65 90 between? ] [ 155 code - ]
+    [ code 97 122 between? ] [ 219 code - ]
     [ code ]
-    if ]
-  if ;
+  } cond ;
 
 : atbash ( bytes -- bytes )
   "Reverse the ASCII alphabet (A becomes Z, B becomes Y, and so on), keeping case; other bytes pass through. It is its own inverse." doc
@@ -66,8 +62,8 @@ META: rot47
 
 META: atbash
   use-when "You have a puzzle text whose alphabet runs backwards, with A written for Z and B for Y, and want it read. Applying it twice gives the text back." ;
-  link "https://en.wikipedia.org/wiki/Atbash" "Atbash on Wikipedia" ;
   see-also classical:rot classical:substitute ;
+  link "https://en.wikipedia.org/wiki/Atbash" "Atbash on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -75,13 +71,11 @@ META: atbash
 \ ---------------------------------------------------------------------------------------------
 
 : _affine-code ( code:int a:int b:int -- int )
-  code 65 90 util:between?
-  [ code 65 - a * b + 26 mod 65 + ]
-  [ code 97 122 util:between?
-    [ code 97 - a * b + 26 mod 97 + ]
+  {
+    [ code 65 90 between? ] [ code 65 - a * b + 26 mod 65 + ]
+    [ code 97 122 between? ] [ code 97 - a * b + 26 mod 97 + ]
     [ code ]
-    if ]
-  if ;
+  } cond ;
 
 : _affine ( data:bytes a:int b:int -- bytes )
   data [ a b _affine-code ] map ;
@@ -93,11 +87,11 @@ META: atbash
 
 META: affine-encrypt
   use-when "You have a puzzle message and the multiplier a and shift b of an affine cipher, and want it enciphered for a CTF challenge or a lesson." ;
-  inverse affine-decrypt ;
-  link "https://en.wikipedia.org/wiki/Affine_cipher" "Affine cipher on Wikipedia" ;
   param a "Multiplier; must be coprime to 26 (1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23 or 25)." ;
   param b "Shift, 0 to 25." ;
+  inverse affine-decrypt ;
   see-also classical:affine-decrypt classical:rot ;
+  link "https://en.wikipedia.org/wiki/Affine_cipher" "Affine cipher on Wikipedia" ;
 ;
 
 : affine-decrypt ( bytes a:int[1|3|5|7|9|11|15|17|19|21|23|25]=5 b:int[0..25]=8 -- bytes )
@@ -107,11 +101,11 @@ META: affine-encrypt
 
 META: affine-decrypt
   use-when "You have affine ciphertext and the multiplier a and shift b that made it, and want the plaintext back, as in a puzzle or a lesson." ;
-  inverse affine-encrypt ;
-  link "https://en.wikipedia.org/wiki/Affine_cipher" "Affine cipher on Wikipedia" ;
   param a "Multiplier used to encrypt; must be coprime to 26." ;
   param b "Shift used to encrypt, 0 to 25." ;
+  inverse affine-encrypt ;
   see-also classical:affine-encrypt ;
+  link "https://en.wikipedia.org/wiki/Affine_cipher" "Affine cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -136,10 +130,10 @@ META: affine-decrypt
 
 META: vigenere-encrypt
   use-when "You have a message and a keyword and want it enciphered with the Vigenere cipher, for a puzzle or a CTF challenge. The keyword repeats over the letters." ;
-  inverse vigenere-decrypt ;
-  link "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher" "Vigenere cipher on Wikipedia" ;
   param key "Key letters A to Z (either case), 1 to 256 of them." ;
+  inverse vigenere-decrypt ;
   see-also classical:vigenere-decrypt classical:rot ;
+  link "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher" "Vigenere cipher on Wikipedia" ;
 ;
 
 : vigenere-decrypt ( bytes key:str[1..256,/[A-Za-z]+/] -- bytes )
@@ -149,15 +143,21 @@ META: vigenere-encrypt
 
 META: vigenere-decrypt
   use-when "You have Vigenere ciphertext and its keyword, as in a puzzle or a lesson, and want the plaintext back. The keyword is case-insensitive." ;
-  inverse vigenere-encrypt ;
-  link "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher" "Vigenere cipher on Wikipedia" ;
   param key "Key letters A to Z (either case), 1 to 256 of them." ;
+  inverse vigenere-encrypt ;
   see-also classical:vigenere-encrypt ;
+  link "https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher" "Vigenere cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
 \ Bacon
 \ ---------------------------------------------------------------------------------------------
+
+\ The two alphabets of Bacon's cipher.
+CHOICE: bacon-alphabet
+  option classic "24 letters: I and J share a code, and so do U and V." ;
+  option complete "All 26 letters have a code of their own." ;
+;
 
 : _bits5 ( n:int -- str )
   { n 4 shr 1 band 65 + n 3 shr 1 band 65 + n 2 shr 1 band 65 + n 1 shr 1 band 65 + n 1 band 65 + }
@@ -174,34 +174,34 @@ META: vigenere-decrypt
   [ 223 band 65 - classic _bacon-index _bits5 ] map
   " " join ;
 
-: bacon-encode ( str alphabet:choice{classic|complete}=classic -- str )
+: bacon-encode ( str alphabet:choice<bacon-alphabet>=classic -- str )
   "Bacon's cipher: each letter A to Z (either case) becomes five symbols A/B, its 5-bit position written with A = 0 and B = 1; groups are separated by single spaces. Other characters are dropped. classic uses the 24-letter alphabet (I and J share a code, U and V share a code); complete gives all 26 letters their own code." doc
   "Classical ciphers" category
   alphabet "classic" = _bacon-encode ;
 
 META: bacon-encode
   use-when "You want to write a message as groups of five A and B symbols, one group for each letter, as in a puzzle or an old hiding method." ;
-  inverse bacon-decode ;
-  link "https://en.wikipedia.org/wiki/Bacon's_cipher" "Bacon's cipher on Wikipedia" ;
   param alphabet "classic: 24 letters (I=J, U=V). complete: 26 letters." ;
+  inverse bacon-decode ;
   see-also classical:bacon-decode ;
+  link "https://en.wikipedia.org/wiki/Bacon's_cipher" "Bacon's cipher on Wikipedia" ;
 ;
 
 : _bacon-lookup ( t:bytes table:bytes -- str )
   0 t len 5 div range
-  [ 5 * dup 5 + t -rot slice
+  [ 5 * :> s t s s 5 + slice
     0 [ 98 = [ 1 ] [ 0 ] if swap 2 * + ] reduce
     dup table len >=
-    [ "bacon-decode: a group does not code a letter of this alphabet" raise:coerce ] when
+    [ "bacon-decode: a group does not code a letter of this alphabet" fail-coerce ] when
     table swap nth ]
   map
   list>bytes bytes>str ;
 
 : _bacon-groups ( t:bytes classic:bool -- str )
-  t [ dup 97 = swap 98 = or ] filter len t len <>
-  [ "bacon-decode: only the symbols A and B (any case) and white space are allowed" raise:coerce ] when
+  t [ dup 97 = swap 98 = or ] all? not
+  [ "bacon-decode: only the symbols A and B (any case) and white space are allowed" fail-coerce ] when
   t len 5 mod 0 <>
-  [ "bacon-decode: the number of A/B symbols must be a multiple of five" raise:coerce ] when
+  [ "bacon-decode: the number of A/B symbols must be a multiple of five" fail-coerce ] when
   t
   classic
   [ "ABCDEFGHIKLMNOPQRSTUWXYZ" ]
@@ -209,18 +209,18 @@ META: bacon-encode
   if str>bytes
   _bacon-lookup ;
 
-: bacon-decode ( str alphabet:choice{classic|complete}=classic -- str )
+: bacon-decode ( str alphabet:choice<bacon-alphabet>=classic -- str )
   "Decode Bacon's cipher: read the A/B symbols (any case, white space ignored) in groups of five and give upper-case letters. With classic, I/J decode as I and U/V as U. Other symbols, a symbol count that is not a multiple of five, or a group outside the alphabet are errors (E_COERCE)." doc
   "Classical ciphers" category
-  str>bytes [ util:space? not ] filter [ 32 bor ] map
+  str>bytes [ space? not ] filter [ 32 bor ] map
   alphabet "classic" = _bacon-groups ;
 
 META: bacon-decode
   use-when "You have a text of A and B symbols in groups of five, as Bacon's cipher writes letters, and want the message that it hides." ;
-  inverse bacon-encode ;
-  link "https://en.wikipedia.org/wiki/Bacon's_cipher" "Bacon's cipher on Wikipedia" ;
   param alphabet "classic: 24 letters (I=J, U=V). complete: 26 letters." ;
+  inverse bacon-encode ;
   see-also classical:bacon-encode ;
+  link "https://en.wikipedia.org/wiki/Bacon's_cipher" "Bacon's cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -231,7 +231,7 @@ META: bacon-decode
   data [ _is-letter ] filter [ util:upper-merge-i ] map ;
 
 : _add-unique ( acc:bytes c:int -- bytes )
-  acc [ c = ] filter len 0 >
+  acc [ c = ] any?
   [ acc ]
   [ acc { c } list>bytes cat ]
   if ;
@@ -276,10 +276,10 @@ META: bacon-decode
 
 META: bifid-encrypt
   use-when "You have a message and a keyword and want Bifid ciphertext, made with a 5 by 5 square, for a puzzle or a CTF challenge. The output is capital letters only." ;
-  inverse bifid-decrypt ;
-  link "https://en.wikipedia.org/wiki/Bifid_cipher" "Bifid cipher on Wikipedia" ;
   param key "Keyword of letters (J counts as I); empty for the plain alphabet square." ;
+  inverse bifid-decrypt ;
   see-also classical:bifid-decrypt ;
+  link "https://en.wikipedia.org/wiki/Bifid_cipher" "Bifid cipher on Wikipedia" ;
 ;
 
 : bifid-decrypt ( bytes key:str[0..25,/[A-Za-z]*/]="" -- bytes )
@@ -290,10 +290,10 @@ META: bifid-encrypt
 
 META: bifid-decrypt
   use-when "You have Bifid ciphertext from a puzzle and its keyword, and want the message back in capital letters. Spaces and punctuation are not restored." ;
-  inverse bifid-encrypt ;
-  link "https://en.wikipedia.org/wiki/Bifid_cipher" "Bifid cipher on Wikipedia" ;
   param key "Keyword used to encrypt (J counts as I); empty for the plain alphabet square." ;
+  inverse bifid-encrypt ;
   see-also classical:bifid-encrypt ;
+  link "https://en.wikipedia.org/wiki/Bifid_cipher" "Bifid cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -350,10 +350,9 @@ META: bifid-decrypt
 
 : _rf-gather ( data:bytes starts:list off:int rails:int -- bytes )
   0 data len range
-  [ dup off rails _rf-rail
-    dup starts swap nth
-    -rot swap off rails _rf-size
-    + data swap nth ]
+  [ :> i
+    i off rails _rf-rail :> r
+    data starts r nth r i off rails _rf-size + nth ]
   map list>bytes ;
 
 : _rf-decrypt ( data:bytes rails:int off:int -- bytes )
@@ -366,11 +365,11 @@ META: bifid-decrypt
 
 META: rail-fence-encrypt
   use-when "You have a message and a number of rails, and want it scrambled in a zigzag across the rails, as in a puzzle or a school cipher lesson." ;
-  inverse rail-fence-decrypt ;
-  link "https://en.wikipedia.org/wiki/Rail_fence_cipher" "Rail fence cipher on Wikipedia" ;
   param rails "Number of rails, 2 to 1000." ;
   param offset "Steps into the zigzag at which the first byte sits." ;
+  inverse rail-fence-decrypt ;
   see-also classical:rail-fence-decrypt ;
+  link "https://en.wikipedia.org/wiki/Rail_fence_cipher" "Rail fence cipher on Wikipedia" ;
 ;
 
 : rail-fence-decrypt ( bytes rails:int[2..1000]=3 offset:int[0..1000]=0 -- bytes )
@@ -380,11 +379,11 @@ META: rail-fence-encrypt
 
 META: rail-fence-decrypt
   use-when "You have rail fence ciphertext, with the number of rails and offset that made it, and want the plaintext back, as in a puzzle or a lesson." ;
-  inverse rail-fence-encrypt ;
-  link "https://en.wikipedia.org/wiki/Rail_fence_cipher" "Rail fence cipher on Wikipedia" ;
   param rails "Number of rails, 2 to 1000." ;
   param offset "Steps into the zigzag at which the first byte sits." ;
+  inverse rail-fence-encrypt ;
   see-also classical:rail-fence-encrypt ;
+  link "https://en.wikipedia.org/wiki/Rail_fence_cipher" "Rail fence cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -396,23 +395,23 @@ META: rail-fence-decrypt
   "Classical ciphers" category
   str>bytes [ _is-letter ] filter bytes>list
   [ 223 band 64 - int>str ] map
-  delimiter "space" = [ " " ] [ delimiter "comma" = [ "," ] [ "-" ] if ] if
+  delimiter { "space" [ " " ] "comma" [ "," ] [ "-" ] } case
   join ;
 
 META: a1z26-encode
   use-when "You have plain letters, such as a word in a puzzle, and want each one written as its place in the alphabet, from 1 for A to 26 for Z." ;
-  inverse a1z26-decode ;
   param delimiter "Put this between the numbers: space, comma or dash." ;
+  inverse a1z26-decode ;
   see-also classical:a1z26-decode ;
 ;
 
 : a1z26-decode ( str -- str )
   "Replace each number 1 to 26 by the matching upper-case letter. Any run of characters that are not digits separates numbers (spaces, commas, dashes, newlines). A number outside 1 to 26 is an error (E_COERCE)." doc
   "Classical ciphers" category
-  str>bytes [ dup 48 >= over 57 <= and not [ drop 32 ] when ] map bytes>str
+  str>bytes [ dup 48 57 between? not [ drop 32 ] when ] map bytes>str
   " " split [ len 0 > ] filter
   [ str>int dup 1 < over 26 > or
-    [ "a1z26-decode: numbers must be between 1 and 26" raise:coerce ] when
+    [ "a1z26-decode: numbers must be between 1 and 26" fail-coerce ] when
     64 + ]
   map list>bytes bytes>str ;
 
@@ -427,7 +426,7 @@ META: a1z26-decode
 \ ---------------------------------------------------------------------------------------------
 
 : _printable ( code:int -- bool )
-  code 32 126 util:between? ;
+  code 32 126 between? ;
 
 : _sub-byte ( v:int pb:bytes cb:bytes -- int )
   0 pb len range v
@@ -438,11 +437,11 @@ META: a1z26-decode
   0 256 range [ pb cb _sub-byte ] map list>bytes ;
 
 : _substitute ( data:bytes pb:bytes cb:bytes -- bytes )
-  pb [ _printable ] filter len pb len <>
-  cb [ _printable ] filter len cb len <> or
-  [ "substitute: plaintext and ciphertext must be printable ASCII" raise:range ] when
+  pb [ _printable ] all? not
+  cb [ _printable ] all? not or
+  [ "substitute: plaintext and ciphertext must be printable ASCII" fail-range ] when
   pb len cb len <>
-  [ "substitute: plaintext and ciphertext must have the same length" raise:range ] when
+  [ "substitute: plaintext and ciphertext must have the same length" fail-range ] when
   data pb cb _sub-table translate ;
 
 : substitute ( bytes plaintext:charset="ABCDEFGHIJKLMNOPQRSTUVWXYZ" ciphertext:charset="ZYXWVUTSRQPONMLKJIHGFEDCBA" -- bytes )
@@ -452,10 +451,10 @@ META: a1z26-decode
 
 META: substitute
   use-when "You know the two alphabets of a substitution puzzle, with each letter swapped for another, and want the swaps made throughout a text." ;
-  link "https://en.wikipedia.org/wiki/Substitution_cipher" "Substitution cipher on Wikipedia" ;
   param plaintext "The characters to replace (printable ASCII, none repeated)." ;
   param ciphertext "Their replacements, in the same order and of the same length." ;
   see-also classical:atbash classical:rot ;
+  link "https://en.wikipedia.org/wiki/Substitution_cipher" "Substitution cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -465,7 +464,7 @@ META: substitute
 \ Printable ASCII, plus tab, line feed and carriage return.
 \ Not url:_unreserved?: a different set of bytes (printable text, with tab, line feed and carriage return).
 : _text-printable? ( code:int -- bool )
-  code 32 126 util:between? code 9 = or code 10 = or code 13 = or ;
+  code 32 126 between? code 9 = or code 10 = or code 13 = or ;
 
 \ A 256-byte table for translate that applies rot (or rot47) with the shift to every byte.
 : _rot-table ( shift:int v47:bool -- bytes )
@@ -506,40 +505,32 @@ META: rot-brute
 
 \ The position of a code point in the list of valid characters, or -1 when it is not one.
 : _r8-index ( cp:int -- int )
-  cp 33 126 util:between? [ cp 33 - ]
-  [ cp 12289 55295 util:between? [ cp 12289 - 12205 + ]
-    [ cp 161 5759 util:between? [ cp 161 - 94 + ]
-      [ cp 5761 8191 util:between? [ cp 5761 - 5693 + ]
-        [ cp 8288 12287 util:between? [ cp 8288 - 8205 + ]
-          [ cp 57344 65535 util:between? [ cp 57344 - 55212 + ]
-            [ cp 8203 8231 util:between? [ cp 8203 - 8124 + ]
-              [ cp 8234 8238 util:between? [ cp 8234 - 8153 + ]
-                [ cp 8240 8286 util:between? [ cp 8240 - 8158 + ] [ -1 ] if ]
-                if ]
-              if ]
-            if ]
-          if ]
-        if ]
-      if ]
-    if ]
-  if ;
+  {
+    [ cp 33 126 between? ] [ cp 33 - ]
+    [ cp 12289 55295 between? ] [ cp 12289 - 12205 + ]
+    [ cp 161 5759 between? ] [ cp 161 - 94 + ]
+    [ cp 5761 8191 between? ] [ cp 5761 - 5693 + ]
+    [ cp 8288 12287 between? ] [ cp 8288 - 8205 + ]
+    [ cp 57344 65535 between? ] [ cp 57344 - 55212 + ]
+    [ cp 8203 8231 between? ] [ cp 8203 - 8124 + ]
+    [ cp 8234 8238 between? ] [ cp 8234 - 8153 + ]
+    [ cp 8240 8286 between? ] [ cp 8240 - 8158 + ]
+    [ -1 ]
+  } cond ;
 
 \ The code point at a position of the list of valid characters.
 : _r8-cp ( j:int -- int )
-  j 12205 <
-  [ j 94 < [ j 33 + ]
-    [ j 5693 < [ j 94 - 161 + ]
-      [ j 8124 < [ j 5693 - 5761 + ]
-        [ j 8153 < [ j 8124 - 8203 + ]
-          [ j 8158 < [ j 8153 - 8234 + ]
-            [ j 8205 < [ j 8158 - 8240 + ] [ j 8205 - 8288 + ] if ]
-            if ]
-          if ]
-        if ]
-      if ]
-    if ]
-  [ j 55212 < [ j 12205 - 12289 + ] [ j 55212 - 57344 + ] if ]
-  if ;
+  {
+    [ j 94 < ] [ j 33 + ]
+    [ j 5693 < ] [ j 94 - 161 + ]
+    [ j 8124 < ] [ j 5693 - 5761 + ]
+    [ j 8153 < ] [ j 8124 - 8203 + ]
+    [ j 8158 < ] [ j 8153 - 8234 + ]
+    [ j 8205 < ] [ j 8158 - 8240 + ]
+    [ j 12205 < ] [ j 8205 - 8288 + ]
+    [ j 55212 < ] [ j 12205 - 12289 + ]
+    [ j 55212 - 57344 + ]
+  } cond ;
 
 : _r8-char ( cp:int -- int )
   cp _r8-index
@@ -570,9 +561,6 @@ META: rot8000
 : _cb-enc ( data:bytes w:int -- bytes )
   0 w range [ data swap w _cb-col ] map #[ ] bjoin ;
 
-: _cb-encrypt ( data:bytes height:int -- bytes )
-  data data len height util:ceil-div _cb-enc ;
-
 \ rho is the number of rows that hold bytes and last the length of the last of them.
 : _cb-shape ( n:int w:int -- rho:int last:int )
   n w + 1 - w div dup 1 - w * n swap - ;
@@ -588,36 +576,30 @@ META: rot8000
 : _cb-dec ( data:bytes w:int -- bytes )
   data w data len w _cb-shape _cb-unpack ;
 
-: _cb-decrypt ( data:bytes height:int -- bytes )
-  data len 0 =
-  [ data ]
-  [ data data len height util:ceil-div _cb-dec ]
-  if ;
-
 : caesar-box-encrypt ( bytes height:int[1..65536]=2 -- bytes )
   "Caesar box (columnar transposition): write the bytes along the rows of a box of the given height, with as many columns as needed, and read the columns from top to bottom, left to right. The last row may be short; short columns are not padded. A height of 1 changes nothing." doc
   "Classical ciphers" category
-  height _cb-encrypt ;
+  dup len height ceil-div _cb-enc ;
 
 META: caesar-box-encrypt
   use-when "You have a message and a box height, and want it scrambled as a Caesar box, a column transposition written in rows and read in columns, for a puzzle." ;
-  inverse caesar-box-decrypt ;
-  link "https://en.wikipedia.org/wiki/Transposition_cipher" "Transposition cipher on Wikipedia" ;
   param height "Number of rows of the box, 1 to 65536." ;
+  inverse caesar-box-decrypt ;
   see-also classical:caesar-box-decrypt classical:rail-fence-encrypt ;
+  link "https://en.wikipedia.org/wiki/Transposition_cipher" "Transposition cipher on Wikipedia" ;
 ;
 
 : caesar-box-decrypt ( bytes height:int[1..65536]=2 -- bytes )
   "Undo the Caesar box with the same height: the bytes are read down the columns of the box and written back along its rows." doc
   "Classical ciphers" category
-  height _cb-decrypt ;
+  dup len 0 = [ ] [ dup len height ceil-div _cb-dec ] if ;
 
 META: caesar-box-decrypt
   use-when "You have text written in a Caesar box and know its height, and want the original order of its letters back, as in a puzzle." ;
-  inverse caesar-box-encrypt ;
-  link "https://en.wikipedia.org/wiki/Transposition_cipher" "Transposition cipher on Wikipedia" ;
   param height "Number of rows of the box used to encrypt, 1 to 65536." ;
+  inverse caesar-box-encrypt ;
   see-also classical:caesar-box-encrypt ;
+  link "https://en.wikipedia.org/wiki/Transposition_cipher" "Transposition cipher on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -625,7 +607,7 @@ META: caesar-box-decrypt
 \ ---------------------------------------------------------------------------------------------
 
 : _be-unit ( u:int -- bytes )
-  { u 8 shr u 255 band } list>bytes ;
+  u 2 int>be-bytes ;
 
 \ A code point as the big-endian bytes of one or two UTF-16 code units.
 : _cp>be ( cp:int -- bytes )
@@ -642,25 +624,26 @@ META: caesar-box-decrypt
   0 b len range [ 1 bxor b swap nth ] map list>bytes ;
 
 : _lone ( -- )
-  "a lone UTF-16 surrogate cannot be decoded" raise:coerce ;
+  "a lone UTF-16 surrogate cannot be decoded" fail-coerce ;
 
 \ The code point that starts at unit i: -1 for the low half of a pair.
+\ Kept as an if chain: it runs once per unit, and a cond takes 32,768 non-BMP characters (cetacean-decode) from 4,940,115 to 5,628,243 steps.
 : _unit>cp ( units:list i:int -- int )
   units i nth
-  dup 55296 56319 util:between?
+  dup 55296 56319 between?
   [ i 1 + units len <
     [ units i 1 + nth ] [ _lone 0 ] if
-    dup 56320 57343 util:between? not [ _lone ] when
+    dup 56320 57343 between? not [ _lone ] when
     56320 - swap 55296 - 10 shl + 65536 + ]
-  [ dup 56320 57343 util:between?
-    [ drop i 0 > [ units i 1 - nth 55296 56319 util:between? not ] [ true ] if
+  [ dup 56320 57343 between?
+    [ drop i 0 > [ units i 1 - nth 55296 56319 between? not ] [ true ] if
       [ _lone ] when -1 ]
     when ]
   if ;
 
 \ Code units as text. Without surrogates the units are the code points.
 : _units>str ( units:list -- str )
-  units [ 55296 57343 util:between? ] filter len 0 =
+  units [ 55296 57343 between? ] any? not
   [ units codes>str ]
   [ units [ nip units swap _unit>cp ] mapi [ -1 <> ] filter codes>str ]
   if ;
@@ -668,7 +651,7 @@ META: caesar-box-decrypt
 \ UTF-16 bytes (an even number of them), little-endian or big-endian, as text.
 : _utf16>str ( b:bytes le:bool -- str )
   0 b len 2 div range
-  [ 2 * dup b swap nth swap 1 + b swap nth le [ swap ] when swap 8 shl bor ] map
+  [ 2 * b swap 2 le [ le-bytes>int ] [ be-bytes>int ] if ] map
   _units>str ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -691,13 +674,13 @@ META: caesar-box-decrypt
 META: cetacean-encode
   use-when "You want text written as a row of E and e symbols, for a puzzle or a CTF challenge, with each UTF-16 code unit written as sixteen symbols." ;
   inverse cetacean-decode ;
-  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
   see-also classical:cetacean-decode ;
+  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
 ;
 
 \ The 0 and 1 characters of a chunk of bits as hex digits.
 : _cet-chunk ( s:str -- str )
-  s 2 str>int-radix s len 4 div util:pad-hex ;
+  s 2 str>int-radix s len 4 div pad-hex ;
 
 \ Text of 0 and 1 characters as hex, 4096 bits at a time.
 : _cet-hex ( s:str -- str )
@@ -706,7 +689,7 @@ META: cetacean-encode
 \ The bits (a byte each, 0 or 1) as big-endian bytes; their number must be a multiple of 16.
 : _cet-pack ( bits:bytes -- bytes )
   bits len 16 mod 0 <>
-  [ "cetacean-decode: the number of E and e symbols must be a multiple of 16" raise:coerce ] when
+  [ "cetacean-decode: the number of E and e symbols must be a multiple of 16" fail-coerce ] when
   bits 0 256 range [ 48 + 255 band ] map list>bytes translate bytes>latin1
   _cet-hex hex>bytes ;
 
@@ -720,8 +703,8 @@ META: cetacean-encode
 META: cetacean-decode
   use-when "You have a long run of E and e symbols, sixteen for each character, and want the text they stand for, as in a puzzle." ;
   inverse cetacean-encode ;
-  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
   see-also classical:cetacean-encode ;
+  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -740,9 +723,9 @@ META: cetacean-decode
 : _ctx-letter ( code:int -- int )
   code 57 <= [ code 48 - 65 + ] [ code 97 - 75 + ] if ;
 
-: _ctx-table ( -- bytes )
+MEMO: _ctx-table ( -- bytes )
   0 256 range
-  [ dup 48 57 util:between? over 97 102 util:between? or [ _ctx-letter ] when ]
+  [ dup 48 57 between? over 97 102 between? or [ _ctx-letter ] when ]
   map list>bytes ;
 
 : ctx1-encode ( str -- str )
@@ -753,8 +736,8 @@ META: cetacean-decode
 META: ctx1-encode
   use-when "You want the Citrix CTX1 obfuscated form of a password, for example to check a stored value in a CTF challenge. It is obfuscation, not encryption." ;
   inverse ctx1-decode ;
-  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
   see-also classical:ctx1-decode ;
+  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
 ;
 
 \ Undo the chain: p(i) = c(i) xor 0xA5 xor c(i-1).
@@ -765,13 +748,15 @@ META: ctx1-encode
   if ;
 
 \ Index (0 to 15) to the hex digit of that value.
-: _ctx-hex-table ( -- bytes )
-  0 256 range [ dup 16 < [ dup 10 < [ 48 + ] [ 87 + ] if ] [ drop 0 ] if ] map list>bytes ;
+MEMO: _ctx-hex-table ( -- bytes )
+  0 256 range
+  [ :> n { [ n 10 < ] [ n 48 + ] [ n 16 < ] [ n 87 + ] [ 0 ] } cond ]
+  map list>bytes ;
 
 \ The letter indexes (two per byte) as bytes, through hex text.
 : _ctx-unpair ( nibs:bytes -- bytes )
   nibs len 4 mod 0 <>
-  [ "ctx1-decode: the number of letters must be a multiple of four" raise:coerce ] when
+  [ "ctx1-decode: the number of letters must be a multiple of four" fail-coerce ] when
   nibs _ctx-hex-table translate bytes>latin1 hex>bytes ;
 
 : ctx1-decode ( str -- str )
@@ -784,8 +769,8 @@ META: ctx1-encode
 META: ctx1-decode
   use-when "You have a string of letters from A to P, such as an obfuscated password from a Citrix setting, and want the text that it hides." ;
   inverse ctx1-encode ;
-  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
   see-also classical:ctx1-encode ;
+  link "https://en.wikipedia.org/wiki/UTF-16" "UTF-16 on Wikipedia" ;
 ;
 
 \ ---------------------------------------------------------------------------------------------
@@ -811,7 +796,7 @@ META: ctx1-decode
 
 \ Place of a letter on the standard board (0 to 48).
 : _ls-std ( ch:int -- int )
-  _ls-alpha ch util:cp>str split 0 nth len ;
+  _ls-alpha ch cp>str split 0 nth len ;
 
 \ Rotate the row starting at byte s by m places left (mid[m:] + mid[:m]).
 : _ls-rr ( k:bytes s:int m:int -- bytes )
@@ -850,15 +835,131 @@ META: ctx1-decode
 
 \ ---- the cipher ----
 
-\ The letter-by-letter cipher is the private primitive _ls47 (src/prims/classical.ts).
+\ The letter-by-letter cipher. The board is not kept as a board but as its inverse, a 49-byte table with the place
+\ (0 to 48) of each letter, indexed by the letter's place on the standard board. Moving a row or a column then
+\ moves places, which is a value mapping, so one native `translate` with a fixed 256-byte table does the whole
+\ rotation. Adding an offset to a place is a value mapping too (one table per offset), and so is moving the
+\ marker. The letter at a place is found by looking for the place in the Latin-1 text of the table with `split`.
+\ The tables are built once (MEMO:); a letter costs about 55 interpreter steps, so 64 KiB of text takes about
+\ 3.6 million steps (the web app allows 5 million).
+
+MEMO: _ls-id ( -- bytes )
+  0 256 range list>bytes ;
+
+MEMO: _ls-chars ( -- list )
+  0 49 range [ cp>str ] map ;
+
+MEMO: _ls-decode ( -- bytes )
+  _ls-alpha 255 255 util:decode-table ;
+
+\ Letter id (0 to 48) to letter byte; the other 207 entries are padding.
+MEMO: _ls-letters ( -- bytes )
+  _ls-alpha str>bytes 207 zero-bytes cat ;
+
+\ Table r moves the places of row r one place right: place s + j goes to s + (j + 1) mod 7.
+MEMO: _ls-rows ( -- list )
+  0 7 range [
+    7 * :> s
+    _ls-id 0 s slice
+    _ls-id s 1 + s 7 + slice cat
+    _ls-id s s 1 + slice cat
+    _ls-id s 7 + 256 slice cat
+  ] map ;
+
+\ The transpose of the places: (row, column) goes to (column, row).
+MEMO: _ls-transpose ( -- bytes )
+  [ 0 7 range [ :> r 0 7 range [ 7 * r + emit ] each ] each ] collect-bytes
+  _ls-id 49 256 slice cat ;
+
+\ Table c moves the places of column c one place down: the row table of c between two transposes.
+MEMO: _ls-cols ( -- list )
+  0 7 range [ :> c _ls-transpose _ls-rows c nth translate _ls-transpose translate ] map ;
+
+\ For each place, the table that moves its row, and the table that moves its column.
+MEMO: _ls-rowp ( -- list )
+  0 49 range [ 7 div _ls-rows swap nth ] map ;
+
+MEMO: _ls-colp ( -- list )
+  0 49 range [ 7 mod _ls-cols swap nth ] map ;
+
+\ Every row one place right.
+MEMO: _ls-rotall ( -- bytes )
+  _ls-rows _ls-id [ translate ] reduce ;
+
+\ That k times: the places (r, c) go to (r, c + k mod 7).
+MEMO: _ls-addc ( -- list )
+  0 7 range [ :> k 0 k range _ls-id [ drop _ls-rotall translate ] reduce ] map ;
+
+\ The same for the rows: the places (r, c) go to (r + k mod 7, c), between two transposes.
+MEMO: _ls-addr ( -- list )
+  0 7 range [ :> k _ls-transpose _ls-addc k nth translate _ls-transpose translate ] map ;
+
+\ For each place t (an offset), the table that adds t to a place; and the table that subtracts it.
+MEMO: _ls-add ( -- list )
+  0 49 range [ :> t _ls-addc t 7 mod nth _ls-addr t 7 div nth translate ] map ;
+
+MEMO: _ls-sub ( -- list )
+  0 49 range [
+    :> t _ls-addc 7 t 7 mod - 7 mod nth _ls-addr 7 t 7 div - 7 mod nth translate
+  ] map ;
+
+\ The inverse board of a 49-byte key: the place in the key of each letter of the alphabet. A key that is not
+\ 49 tiles, or that does not use each letter once, is E_COERCE.
+: _ls-inverse ( key:bytes -- bytes )
+  key len 49 <> [ "LS47 key: the board needs 49 tiles" fail-coerce ] when
+  key bytes>latin1 :> ktext
+  0 49 range [ _ls-alpha swap dup 1 + slice ktext swap split 0 nth len ] map list>bytes
+  dup [ 49 = ] any? [ "LS47 key: the board must use each LS47 letter once" fail-coerce ] when ;
+
+\ Encrypt (dec false) or decrypt (dec true) text on the board key. The state on the stack is the inverse board
+\ and the marker (a one-byte value holding its place); x is the id of the input letter, o the place of the
+\ output letter and y its id. A letter outside the alphabet is E_COERCE.
+: _ls47 ( text:bytes key:bytes dec:bool -- bytes )
+  text _ls-decode util:check-symbols :> ids
+  [
+    key _ls-inverse _ls-id 0 1 slice
+    ids
+    dec
+    [
+      [
+        :> x :> mb :> inv
+        inv bytes>latin1 :> invs
+        invs mb bytes>latin1 split 0 nth len :> t
+        inv _ls-sub t nth translate x nth :> o
+        invs _ls-chars o nth split 0 nth len :> y
+        y emit
+        inv _ls-rowp o nth translate :> inv1
+        inv1 _ls-colp inv1 x nth nth translate
+        mb _ls-add x nth translate
+      ]
+    ]
+    [
+      [
+        :> x :> mb :> inv
+        inv bytes>latin1 :> invs
+        inv x nth :> q
+        invs mb bytes>latin1 split 0 nth len :> t
+        _ls-add t nth q nth :> o
+        invs _ls-chars o nth split 0 nth len :> y
+        y emit
+        inv _ls-rowp q nth translate :> inv1
+        inv1 _ls-colp inv1 y nth nth translate
+        mb _ls-add y nth translate
+      ]
+    ]
+    if each
+    drop2
+  ] collect-bytes
+  _ls-letters translate ;
+
 : _ls-run ( text:bytes key:bytes dec:bool -- str )
   text key dec _ls47 bytes>str ;
 
 \ Raise E_COERCE unless every byte is a letter of the board.
 : _ls-check ( data:bytes what:str -- bytes )
   data _ls-alpha 255 255 util:decode-table translate
-  [ 255 = ] filter len 0 <>
-  [ what raise:coerce ] when
+  [ 255 = ] any?
+  [ what fail-coerce ] when
   data ;
 
 : _ls-text ( s:str what:str -- bytes )
@@ -877,10 +978,10 @@ META: ctx1-decode
 
 META: ls47-encrypt
   use-when "You want to encipher a message with the LS47 hand cipher, using a password, a nonce and an optional signature, for a puzzle or an exercise." ;
-  inverse ls47-decrypt ;
   param password "Makes the board: letters of the LS47 alphabet, 1 to 4096 of them." ;
   param nonce "Letters put in front of the text, so the same text encrypts differently. Empty for none." ;
   param signature "Appended as --- plus these letters, so a changed message can be noticed. Empty for none." ;
+  inverse ls47-decrypt ;
   see-also classical:ls47-decrypt ;
 ;
 
@@ -888,12 +989,12 @@ META: ls47-encrypt
 \ given, the --- and signature checked and removed from the end.
 : _ls-strip ( plain:str n:int sig:str -- str )
   plain len n <
-  [ "ls47-decrypt: the message is shorter than the nonce" raise:coerce ] when
+  [ "ls47-decrypt: the message is shorter than the nonce" fail-coerce ] when
   plain n plain len slice
   sig len 0 =
   [ ]
-  [ dup "---" sig cat util:ends-with? not
-    [ "ls47-decrypt: the signature does not match" raise:coerce ] when
+  [ dup "---" sig cat ends-with? not
+    [ "ls47-decrypt: the signature does not match" fail-coerce ] when
     dup 0 over len "---" sig cat len - slice nip ]
   if ;
 
@@ -906,9 +1007,9 @@ META: ls47-encrypt
 
 META: ls47-decrypt
   use-when "You have an LS47 message, with the password, nonce length and any signature used to make it, and want the plaintext back, as in a puzzle." ;
-  inverse ls47-encrypt ;
   param password "The password used to encrypt." ;
   param nonce-length "How many nonce letters were put in front of the text." ;
   param signature "The signature used to encrypt (checked and removed). Empty for none." ;
+  inverse ls47-encrypt ;
   see-also classical:ls47-encrypt ;
 ;
