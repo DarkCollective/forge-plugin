@@ -61,6 +61,39 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   stack effect as tail text and the vocabulary as type text; `vocab:` offers that vocabulary's words; `USING:` and
   `IN:` offer vocabulary names
 - color settings page for FL syntax colors
+- running FL code and words with the Forge engine (see *Running FL* below)
+
+## Running FL
+
+A ▶ in the gutter on the name of every word (`:` and `MEMO:`) opens a dialog with one field per input of its header,
+deepest first, filled with the header defaults (or the values used last time); a `choice{…}` or `choice<…>` input is a
+combo box of its options and a `bool` a true/false box. For a string-typed input (`str`, `choice`, `regex`, `charset`,
+`toggle`, `key`) the text is taken as the string itself; start it with `"` to write an FL string literal instead. Other
+inputs take FL source: `42`, `#[ 68 69 ]`, `"text"` for a `bytes` input, `[ 1 2 ]`. **Run** saves all files and runs
+the word through a temporary run configuration named after it (`base32:encode`), so Ctrl+R / ⌃R runs it again with
+the same inputs. The current vocabulary is the word's, so private `_words` run too.
+
+The **FL** run configuration (*Run | Edit Configurations*) runs any FL code at the Forge console (LANGUAGE.md §9):
+
+| Field | |
+|---|---|
+| Forge checkout | the Forge repository; it must be built (`npm run build`). Empty: the checkout that contains the project, or the one used last |
+| Node.js | `node`, version 20 or newer. Empty: found on the `PATH`, in Homebrew, `/usr/local/bin`, Volta, nvm or fnm |
+| FL program | console source, e.g. `"hello" "standard" true base32:encode` or `1 2 + .` |
+| Vocabulary | the current vocabulary while the program runs (gives access to that vocabulary's private words) |
+| Extra files | FL files outside the checkout, loaded as user units after the bundle (the ▶ adds the word's own file when it is not in `packages/ops/vocab`) |
+| Max steps, max milliseconds | engine limits; empty means the engine default |
+
+Every run builds a fresh runtime from the files on disk (all vocabularies of `packages/ops/vocab`, the primitives
+from `packages/ops/dist`), so an edited word is never stale (early binding, §6.5). The console shows what the
+program printed, the result stack deepest first (secret values as `<redacted>`), the steps, the time and the effect
+labels. An error shows its code and message and one `at word (file.fth:line:col)` line per frame; the locations are
+links. The stop button kills the run.
+
+Under the hood the plugin starts `node forge-runner.mjs` (bundled in the plugin, copied to the IDE system directory)
+and sends it the request as JSON on stdin; the runner imports `@forge/ops` and `@forge/lang` from the checkout's
+`dist` directories. TypeScript primitives are taken from the last build, so rebuild Forge after changing one.
+Debugging (breakpoints, stepping) is not implemented yet; see [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
 
 ## Built-in words
 
@@ -104,6 +137,7 @@ stream alone (`FLLightScan`); bump `FLIndex.VERSION` when the format or the scan
 `./gradlew test`. With `-Dfl.corpus=...` it also prints `FL-DIAG files=.. errors=.. warnings=.. weak=..` (fails on errors or warnings). To parse a directory of real sources and check that every word reference in it resolves:
 `./gradlew test -Dfl.corpus=/path/to/forge/packages/ops/vocab` (prints `FL-RESOLVE files=.. refs=.. unresolved=..
 ambiguous=..`; the run fails when either count is not zero). Without the property the corpus test does not run.
+`-Dfl.forge=/path/to/forge` (a built checkout) also runs the bundled FL runner against it with Node.
 
 ## Run locally
 

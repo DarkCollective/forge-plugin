@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (running FL)
+- A ▶ gutter icon on every word: a dialog with one field per header input (defaults filled in, a combo box for
+  `choice` and `bool` inputs), then a run through a temporary run configuration named after the word.
+- The **FL** run configuration: runs any FL console source in a fresh runtime built from a built Forge checkout, with
+  a current vocabulary, extra user-unit files, and step and time limits. The console shows the output, the result
+  stack, steps, time and effects; error frames link to `file.fth:line:col`.
+- `forge-runner.mjs`, the Node.js runner the plugin starts (Node 20 or newer), and `FLRunTest`
+  (`-Dfl.forge=/path/to/forge` runs it against a real checkout).
+
 ### Added (FL v0.2)
 - Lexer and parser: the keywords `MEMO:`, `CHOICE:` and `:>` (standalone only; `MEMO:foo` stays a qualified name),
   the header after `MEMO: name`, `CHOICE:` blocks with `option` clauses, `:>` bindings, `name:choice<type>` header

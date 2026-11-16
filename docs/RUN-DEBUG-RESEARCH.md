@@ -1,6 +1,8 @@
 # Running and debugging FL from the plugin: feasibility
 
-Status: research, November 2026. Nothing here is implemented in the plugin yet.
+Status: research, November 2026. Phase 1 (Run) is implemented: see *Running FL* in the README. The input
+dialog uses text fields for `bytes`, `key` and `toggle` (an FL literal or text), not separate hex and Base64 modes.
+The debugger (phase 2) is not implemented.
 
 ## Verdict
 
