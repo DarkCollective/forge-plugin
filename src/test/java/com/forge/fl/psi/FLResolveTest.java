@@ -118,11 +118,11 @@ public class FLResolveTest extends FLMultiFileTestBase {
     }
 
     public void testTypeScriptPrimitivesOfOtherVocabularies() {
-        // util:decode-table is an FL word (util.fth), not a primitive; raise:range and hex:encode are TypeScript
+        // util:decode-table is an FL word (util.fth), not a primitive; raise:range and json:parse are TypeScript
         PsiElement range = resolveAt("m.fth", ": f ( -- ) <caret>raise:range ;\n");
         assertEquals("raise.fl:range", where(range));
         assertEquals("( reason:str -- )", ((FLDefinition) range).getEffectText());
-        assertEquals("hex.fl:encode", where(resolveAt("m2.fth", "USING: hex ;\n: f ( -- ) <caret>encode ;\n")));
+        assertEquals("json.fl:parse", where(resolveAt("m2.fth", "USING: json ;\n: f ( -- ) <caret>parse ;\n")));
         // private TypeScript primitive: visible in its own vocabulary only
         assertEquals("adler32.fl:_adler", where(resolveAt("m3.fth", "IN: adler32\n: f ( -- ) <caret>_adler ;\n")));
         assertNull(resolveAt("m4.fth", "USING: adler32 ;\n: f ( -- ) <caret>_adler ;\n"));

@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed (FL v0.2, Forge main of 16 November 2026)
+- `checks` is no longer reserved: `checks <input|output> <test> <arguments> ;` with the tests `regex`, `charset`,
+  `entropy`, `magic-bytes` (hex and offset, or `format`), `printable`, `utf8` and `binary`, validated as Forge's
+  `meta-checks.ts` does (same reasons), and at most 8 per word. Number tokens are allowed in this clause only.
+- New `META:` clause `expects "<what>" ;` (the `use-when` rules, at most 64 characters).
+- `builtins.json` regenerated: `base64:_sextets`, `base64:_unsextets`, `magic:_identity` and `magic:_search` are new
+  primitives; `base64` and `hex` encode/decode and `list` sort, sort-by and shuffle are FL words again.
+- `FLCorpusTest` lists misplaced `META:` blocks (`FL-META-PLACEMENT`) without failing.
+
 ### Added (running FL)
 - A ▶ gutter icon on every word: a dialog with one field per header input (defaults filled in, a combo box for
   `choice` and `bool` inputs), then a run through a temporary run configuration named after the word.

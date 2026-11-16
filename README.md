@@ -9,8 +9,8 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
 
 - `.fl` / `.fth` file type support, with a lexer and parser that follow `docs/LANGUAGE.md` sections 2 and 5,
   including the v0.2 forms: `MEMO:` definitions, `CHOICE:` blocks with `option` clauses, `:>` mid-body locals,
-  `name:choice<type>` header types, and the `META:` clauses `use-when`, `link`, `inverse`, `helper` (and the
-  reserved `checks`)
+  `name:choice<type>` header types, and the `META:` clauses `use-when`, `link`, `inverse`, `helper`, `checks` and
+  `expects`
 - syntax highlighting, including stack-effect headers and parameters
 - code formatting in the style of [docs/FL-STYLE.md](docs/FL-STYLE.md): top-level forms, definition bodies,
   multi-line quotations/lists, `META:` and `CHOICE:` blocks, end-of-line comments; the default indent is two
@@ -37,8 +37,9 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   its own body), E_NO_VOCAB (qualified names and `USING:`), E_AMBIGUOUS (with a quick fix per candidate that writes
   `vocab:name`), E_PRIVATE, E_REDEFINED (words, constants, variables and `n!`, aliases), E_NAME, E_HEADER (no header,
   no `--`, duplicate, reserved or malformed parameter name), E_META (undefined or later target, private target,
-  unknown clause, `param` that is not a parameter other than the first input, `checks`, `use-when` text rules,
-  `link` URL grammar, duplicates and the 8-link cap, `inverse` outside the current vocabulary, private or undefined),
+  unknown clause, `param` that is not a parameter other than the first input, `use-when` and `expects` text rules,
+  `link` URL grammar, duplicates and the 8-link cap, `checks` scope, test and arguments (the rules of Forge's
+  `meta-checks.ts`, with its reasons) and the 8-check cap, `inverse` outside the current vocabulary, private or undefined),
   and for v0.2: `exit` outside a body or a quotation passed to if/when/unless/while/loop (E_SYNTAX), `:>` outside a
   definition or inside `{ }` (E_SYNTAX), a duplicate local (E_REDEFINED), a `MEMO:` header other than `( -- T )`
   (E_HEADER), `recurse` in a `MEMO:` body, a `MEMO:` body that uses a variable, `.`, `.s` or a session word
@@ -47,7 +48,8 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   warnings E_TOPLEVEL / `VOCAB` in a file and W_SHADOW are two inspections that can be switched off. Not checked:
   types, constraints and defaults of headers, stack effects, repeated `doc`/`category`/`version`, string lengths,
   alias collisions with words of other files, `IN: core`, `PRIMITIVE` registry checks, `MEMO:` purity through
-  callees and effect labels (+async, +random, +time), `emit` outside a collector (a run-time rule)
+  callees and effect labels (+async, +random, +time), `emit` outside a collector (a run-time rule), whether a
+  `checks regex` pattern is valid JavaScript, repeated `expects`
 - quick documentation (qualified name, kind, effect, doc, category, version, parameters with META help, aliases,
   see-also, constant/variable value; built-ins from their comment lines), also in the completion popup
 - Go to Symbol (index-backed; names are `vocab:name`, so `encrypt` and `aes:enc` both match; built-ins with
@@ -137,7 +139,9 @@ stream alone (`FLLightScan`); bump `FLIndex.VERSION` when the format or the scan
 `./gradlew test`. With `-Dfl.corpus=...` it also prints `FL-DIAG files=.. errors=.. warnings=.. weak=..` (fails on errors or warnings). To parse a directory of real sources and check that every word reference in it resolves:
 `./gradlew test -Dfl.corpus=/path/to/forge/packages/ops/vocab` (prints `FL-RESOLVE files=.. refs=.. unresolved=..
 ambiguous=..`; the run fails when either count is not zero). Without the property the corpus test does not run.
-`-Dfl.forge=/path/to/forge` (a built checkout) also runs the bundled FL runner against it with Node.
+`-Dfl.forge=/path/to/forge` (a built checkout) also runs the bundled FL runner against it with Node. With
+`-Dfl.corpus`, `FL-META-PLACEMENT` lines list the `META:` blocks that are not next to their definition (FL-STYLE.md §7);
+that is a style rule, so the list never fails the run.
 
 ## Run locally
 

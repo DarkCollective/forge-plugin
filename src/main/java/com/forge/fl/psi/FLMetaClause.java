@@ -6,8 +6,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * One META: clause: doc, category, version, param, alias, see-also, and (FL v0.2) use-when, link, inverse, helper
- * or the reserved checks. The URL of a {@code link} clause is a web reference, so it can be opened from the editor.
+ * One META: clause: doc, category, version, param, alias, see-also, and (FL v0.2) use-when, link, inverse, helper,
+ * expects and checks. The URL of a {@code link} clause is a web reference, so it can be opened from the editor.
  */
 public class FLMetaClause extends FLPsiElement {
     public FLMetaClause(@NotNull ASTNode node) {

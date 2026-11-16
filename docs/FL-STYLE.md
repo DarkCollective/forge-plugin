@@ -157,10 +157,12 @@ Prefer `cond` to an `if` chain (the list is test/action pairs; a final unpaired 
 |---|---|
 | A `META:` block comes **immediately after** the definition it annotates, after one blank line | Inspection (*Misplaced META: block*, with a *Move META block next to definition* fix that Code Cleanup applies) |
 | `META: name` on one line; one clause per line, indented one level; the closing `;` alone at column 0 | Formatter |
-| Clause order: `doc`, `category`, `version`, `use-when`, `param` (in header order), `alias`, `inverse`, `helper`, `see-also`, `link` | Convention |
+| Clause order: `doc`, `category`, `version`, `use-when`, `param` (in header order), `alias`, `inverse`, `helper`, `see-also`, `link`, `checks`, `expects` | Convention |
 | Short documentation may stay in the leading `"…" doc` / `"…" category` of the definition; do not set the same field in both places (it is `E_META` at load time) | Convention |
 | `use-when`: one sentence, no line break, at most 160 characters, no leading or trailing space | Diagnostics (`E_META`) |
 | `link`: an `https://` URL that follows LANGUAGE.md §5.9, optional label of at most 80 characters, at most 8 per word | Diagnostics (`E_META`) |
+| `checks`: `checks <input\|output> <test> <arguments> ;` as LANGUAGE.md §5.9 lists the tests, at most 8 per word | Diagnostics (`E_META`) |
+| `expects`: the `use-when` rules with at most 64 characters | Diagnostics (`E_META`) |
 
 ```fl
 : rot ( str amount:int[1..25]=13 -- str )

@@ -112,7 +112,7 @@ public class FLIndexTest extends FLMultiFileTestBase {
         List<FLIndexLookup.Hit> uses = FLIndexLookup.usages(getProject(), "pub");
         assertEquals(1, uses.size());
         assertEquals(2, uses.get(0).entries().size());
-        assertTrue(FLIndexLookup.vocabularies(getProject()).containsAll(List.of("a", "b", "core", "hex", "raise")));
+        assertTrue(FLIndexLookup.vocabularies(getProject()).containsAll(List.of("a", "b", "core", "json", "raise")));
         assertEquals(List.of("a.fth"), FLIndexLookup.filesOfVocab(getProject(), "a").stream().map(h -> h.file().getName()).toList());
         // the built-ins are indexed like any file
         assertEquals("core.fl", FLIndexLookup.declarations(getProject(), "core", "dup").get(0).file().getName());

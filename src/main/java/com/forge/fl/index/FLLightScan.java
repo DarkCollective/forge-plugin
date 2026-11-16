@@ -260,11 +260,6 @@ public final class FLLightScan {
     private void clause() {
         String key = tokenText(i);
         i++;
-        if (key.equals("checks")) { // reserved: skipped whole, as the parser does
-            while (i < n && types[i] != SEMI && !isFormStart(types[i])) i++;
-            if (type(i) == SEMI) i++;
-            return;
-        }
         boolean paramName = key.equals("param");
         int args = 0;
         while (i < n && types[i] != SEMI && !isFormStart(types[i])) {
@@ -282,7 +277,7 @@ public final class FLLightScan {
                 case "inverse" -> {
                     if ((t == WORD_NAME || t == QUALIFIED_NAME) && args == 0) use(i);
                 }
-                default -> { // doc, category, version, use-when, link, helper
+                default -> { // doc, category, version, use-when, link, helper, expects, checks
                 }
             }
             args++;

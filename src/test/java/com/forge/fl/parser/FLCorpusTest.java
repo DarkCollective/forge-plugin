@@ -157,4 +157,28 @@ public class FLCorpusTest extends FLTestBase {
         assertEquals("errors", 0, errors);
         assertEquals("warnings", 0, warnings);
     }
+
+    /**
+     * Lists the META: blocks that are not immediately after their definition (FL-STYLE.md section 7). That is a style
+     * rule, not a language rule (a META: block may follow its definition at any distance), so this prints and never fails.
+     */
+    public void testExternalCorpusMetaPlacement() throws IOException {
+        String dir = System.getProperty("fl.corpus");
+        if (dir == null || dir.isBlank()) return;
+        List<Path> files = filesIn(Path.of(dir));
+        List<PsiFile> psi = new ArrayList<>();
+        for (Path p : files) psi.add(myFixture.addFileToProject(p.getFileName().toString(), Files.readString(p)));
+        List<String> misplaced = new ArrayList<>();
+        for (PsiFile f : psi) {
+            for (com.forge.fl.psi.FLMetaBlock block : PsiTreeUtil.findChildrenOfType(f, com.forge.fl.psi.FLMetaBlock.class)) {
+                com.forge.fl.psi.FLDefinition def = com.forge.fl.intentions.FLMetaBlockMover.targetDefinition(block);
+                if (def != null && !com.forge.fl.intentions.FLMetaBlockMover.isImmediatelyAfter(block, def)) {
+                    int line = com.intellij.openapi.util.text.StringUtil.offsetToLineNumber(f.getText(), block.getTextOffset()) + 1;
+                    misplaced.add(f.getName() + ":" + line + " META: " + def.getName());
+                }
+            }
+        }
+        System.out.println("FL-META-PLACEMENT files=" + files.size() + " misplaced=" + misplaced.size());
+        for (String m : misplaced) System.out.println("FL-META-PLACEMENT " + m);
+    }
 }

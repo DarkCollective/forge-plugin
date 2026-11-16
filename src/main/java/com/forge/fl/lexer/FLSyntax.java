@@ -19,12 +19,11 @@ public final class FLSyntax {
             "any", "bytes", "str", "int", "num", "number", "bool", "list", "quot", "record", "file", "regex", "charset");
 
     /**
-     * META: clause words (spec 5.9). {@code use-when}, {@code link}, {@code inverse} and {@code helper} are FL v0.2;
-     * {@code checks} is reserved (any use is E_META) but still a clause word, so that it is reported as reserved.
-     * None of them is reserved outside a META: block.
+     * META: clause words (spec 5.9). {@code use-when}, {@code link}, {@code inverse}, {@code helper},
+     * {@code expects} and {@code checks} are FL v0.2. None of them is reserved outside a META: block.
      */
     public static final Set<String> META_CLAUSES = Set.of("doc", "category", "version", "param", "alias", "see-also",
-            "use-when", "link", "inverse", "helper", "checks");
+            "use-when", "link", "inverse", "helper", "expects", "checks");
 
     /** The clause keyword of a CHOICE: block (spec 5.12); an ordinary name elsewhere. */
     public static final String CHOICE_OPTION = "option";

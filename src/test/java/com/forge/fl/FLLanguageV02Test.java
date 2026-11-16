@@ -139,8 +139,62 @@ public class FLLanguageV02Test extends FLMultiFileTestBase {
         assertEquals(List.of("cbc", "g c m", "128"), t.getOptions());
     }
 
-    public void testChecksIsReserved() {
+    public void testChecksAndExpects() {
+        // the examples of LANGUAGE.md 5.9 (C228, C289)
+        assertEmpty(diag("""
+                : f ( a:int -- ) ;
+                META: f
+                  expects "gzip data" ;
+                  checks input magic-bytes "1f8b" ;
+                  checks output utf8 ;
+                  checks input regex "^[A-Za-z0-9+/]+={0,2}$" ;
+                  checks input charset "A-Za-z0-9+/=" 0.95 ;
+                  checks input entropy 7.2 8 ;
+                  checks input magic-bytes "7573746172" 257 ;
+                  checks input printable ;
+                  checks input magic-bytes format "gzip" ;
+                ;
+                """));
         assertEquals(List.of("E_META:checks \"x\" ;"), diag(": f ( a:int -- ) ;\nMETA: f checks \"x\" ; ;\n"));
+        assertEquals(List.of("E_META:checks inside utf8 ;"), diag(": f ( a:int -- ) ;\nMETA: f checks inside utf8 ; ;\n"));
+        assertEquals(List.of("E_META:\" \""), diag(": f ( a:int -- ) ;\nMETA: f expects \" \" ; ;\n"));
+        assertEquals(List.of("E_META:true"), diag(": f ( a:int -- ) ;\nMETA: f checks input printable true ; ;\n"));
+        StringBuilder nine = new StringBuilder(": f ( a:int -- ) ;\nMETA: f\n");
+        for (int i = 0; i < 9; i++) nine.append("  checks input utf8 ;\n");
+        assertEquals(List.of("E_META:checks input utf8 ;"), diag(nine.append(";\n").toString()));
+    }
+
+    public void testCheckRules() {
+        assertNull(check("input", "binary"));
+        assertEquals("utf8 takes no arguments", check("output", "utf8", "x"));
+        assertEquals("'magic' is not a test (regex, charset, entropy, magic-bytes, utf8, binary, printable)", check("input", "magic"));
+        assertEquals("the minimum entropy is above the maximum", check("input", "entropy", "#8", "#7"));
+        assertEquals("the maximum entropy must be from 0 to 8", check("input", "entropy", "#1", "#9"));
+        assertEquals("empty range z-a in the charset alphabet", check("input", "charset", "z-a"));
+        assertNull(check("input", "charset", "a-z-"));
+        assertEquals("the minimum share must be from 5e-324 to 1", check("input", "printable", "#0"));
+        assertEquals("the hex string must be one or more whole bytes", check("input", "magic-bytes", "abc"));
+        assertEquals("the offset must be an integer", check("input", "magic-bytes", "ab", "#1.5"));
+        assertEquals("the offset and the bytes must end within the first 4096 bytes", check("input", "magic-bytes", "abcd", "#4095"));
+        assertNull(check("input", "magic-bytes", "ab", "#0xff"));
+        assertEquals("the format id must be lower-case words joined by hyphens, at most 64 characters",
+                check("input", "magic-bytes", "#format", "Gzip"));
+        assertEquals("too many arguments for regex", check("input", "regex", "a", "b"));
+        assertEquals("the pattern must not be empty", check("input", "regex", ""));
+        assertNull(com.forge.fl.diagnostics.FLMetaChecks.checkExpects("gzip data"));
+        assertEquals("expects is longer than 64 code points", com.forge.fl.diagnostics.FLMetaChecks.checkExpects("x".repeat(65)));
+    }
+
+    /** Arguments: a scope and a test (words), then strings, or words and numbers written {@code #text}. */
+    private static String check(String... args) {
+        List<com.forge.fl.diagnostics.FLMetaChecks.Arg> list = new ArrayList<>();
+        for (int i = 0; i < args.length; i++) {
+            String a = args[i];
+            list.add(i < 2 ? com.forge.fl.diagnostics.FLMetaChecks.Arg.name(a)
+                    : a.startsWith("#") ? com.forge.fl.diagnostics.FLMetaChecks.Arg.name(a.substring(1))
+                    : com.forge.fl.diagnostics.FLMetaChecks.Arg.str(a));
+        }
+        return com.forge.fl.diagnostics.FLMetaChecks.checkProblem(list);
     }
 
     public void testHelperTakesNoArguments() {

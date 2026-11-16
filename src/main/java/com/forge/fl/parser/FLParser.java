@@ -391,17 +391,12 @@ public class FLParser implements PsiParser {
         PsiBuilder.Marker c = b.mark();
         String key = b.getTokenText();
         b.advanceLexer();
-        if ("checks".equals(key)) { // reserved (5.9): an error whatever follows
-            skipToClauseEnd();
-            c.error("'checks' is reserved for a later release (E_META)");
-            return;
-        }
         int args = 0;
         boolean paramName = "param".equals(key);
         while (!b.eof() && tt() != SEMI && !FORM_STARTS.contains(tt())) {
             IElementType t = tt();
             switch (key == null ? "" : key) {
-                case "doc", "category", "version", "use-when" -> {
+                case "doc", "category", "version", "use-when", "expects" -> {
                     if (t == STRING && args == 0) b.advanceLexer();
                     else errorAndAdvance(t == STRING ? "'" + key + "' takes one string (E_META)" : "string expected (E_META)");
                 }
@@ -415,6 +410,10 @@ public class FLParser implements PsiParser {
                     else errorAndAdvance(args == 0 ? "word name expected (E_META)" : "'inverse' takes one name (E_META)");
                 }
                 case "helper" -> errorAndAdvance("'helper' takes no arguments (E_META)");
+                case "checks" -> { // scope, test and arguments: words, numbers and strings; FLMetaChecks checks the shape
+                    if (t == WORD_NAME || t == NUMBER || t == STRING) b.advanceLexer();
+                    else errorAndAdvance("'checks' takes words, numbers and strings (E_META)");
+                }
                 case "param" -> {
                     if (paramName && t == WORD_NAME) {
                         PsiBuilder.Marker r = b.mark();

@@ -154,6 +154,7 @@ public final class FLDiagnostics {
             exits();
             redefinitions();
             linkLimits();
+            checkLimits();
         }
 
         // ---- top level --------------------------------------------------------------------------------
@@ -590,6 +591,8 @@ public final class FLDiagnostics {
                 if ("use-when".equals(key)) checkUseWhen(clause);
                 else if ("link".equals(key)) checkLink(clause, qname);
                 else if ("inverse".equals(key)) checkInverse(clause, block);
+                else if ("expects".equals(key)) checkExpects(clause);
+                else if ("checks".equals(key)) checkChecks(clause, qname);
             }
             if (element == null) return;
             for (FLMetaClause clause : block.getClauses()) {
@@ -610,6 +613,33 @@ public final class FLDiagnostics {
                     : !v.equals(v.strip()) ? "must not start or end with white space"
                     : v.codePointCount(0, v.length()) > 160 ? "is at most 160 characters" : null;
             if (why != null) add(Severity.ERROR, E_META, "use-when text " + why + " (" + E_META + ")", str.getTextRange());
+        }
+
+        /** {@code expects} (5.9): the use-when rules with a limit of 64 characters. */
+        private void checkExpects(FLMetaClause clause) {
+            PsiElement str = stringArg(clause, 0);
+            if (str == null) return;
+            String why = FLMetaChecks.checkExpects(FLSyntax.decodeString(str.getText()));
+            if (why != null) add(Severity.ERROR, E_META, why + " (" + E_META + ")", str.getTextRange());
+        }
+
+        /** Checks per word for the 8-check cap: {@code qname -> clauses} in file order. */
+        private final Map<String, List<PsiElement>> checks = new java.util.LinkedHashMap<>();
+
+        /** {@code checks} (5.9): a scope, a test and its arguments, as {@code meta-checks.ts} validates them. */
+        private void checkChecks(FLMetaClause clause, String qname) {
+            List<FLMetaChecks.Arg> args = new ArrayList<>();
+            PsiElement first = clause.getFirstChild();
+            for (PsiElement c = first == null ? null : first.getNextSibling(); c != null; c = c.getNextSibling()) {
+                IElementType t = c.getNode().getElementType();
+                if (t == FLTokenTypes.STRING) args.add(FLMetaChecks.Arg.str(FLSyntax.decodeString(c.getText())));
+                else if (t == FLTokenTypes.WORD_NAME || t == FLTokenTypes.NUMBER) args.add(FLMetaChecks.Arg.name(c.getText()));
+            }
+            String why = FLMetaChecks.checkProblem(args);
+            if (why != null) {
+                add(Severity.ERROR, E_META, "META: clause 'checks' " + why + " (" + E_META + ")", clause.getTextRange());
+            }
+            checks.computeIfAbsent(qname, k -> new ArrayList<>()).add(clause);
         }
 
         /** Links per word for the 8-link cap and duplicate URLs: {@code qname -> URLs} in file order. */
@@ -636,6 +666,16 @@ public final class FLDiagnostics {
                 if (l.codePointCount(0, l.length()) > 80 || hasControl(l)) {
                     add(Severity.ERROR, E_META, "A link label is one line of at most 80 characters (" + E_META + ")",
                             label.getTextRange());
+                }
+            }
+        }
+
+        private void checkLimits() {
+            for (Map.Entry<String, List<PsiElement>> e : checks.entrySet()) {
+                List<PsiElement> list = e.getValue();
+                for (int i = FLMetaChecks.CHECKS_MAX; i < list.size(); i++) {
+                    add(Severity.ERROR, E_META, "A word has at most " + FLMetaChecks.CHECKS_MAX + " checks ('" + e.getKey()
+                            + "') (" + E_META + ")", list.get(i).getTextRange());
                 }
             }
         }
