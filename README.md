@@ -172,6 +172,23 @@ ambiguous=..`; the run fails when either count is not zero). Without the propert
 `-Dfl.corpus`, `FL-META-PLACEMENT` lines list the `META:` blocks that are not next to their definition (FL-STYLE.md §7);
 that is a style rule, so the list never fails the run.
 
+## Formatting a directory without the IDE
+
+The formatter and the META-placement fix (Reformat File with Code cleanup) can run over a directory of `.fth`/`.fl`
+files from Gradle, with the test sandbox standing in for the IDE:
+
+```bash
+./gradlew test --tests '*FLFormatDirTest*' -Dfl.format=/path/to/forge/packages/ops/vocab        # rewrite in place
+./gradlew test --tests '*FLFormatDirTest*' -Dfl.formatCheck=/path/to/forge/packages/ops/vocab   # check only
+```
+
+`-Dfl.format=DIR` prints one `FL-FORMAT CHANGED` line per rewritten file and `FL-FORMAT files=N changed=M`.
+`-Dfl.formatCheck=DIR` writes nothing, prints `FL-FORMAT WOULD CHANGE` with the first differing lines of each file, and
+fails when any file would change (a CI-style check). A file with syntax errors is skipped (`FL-FORMAT SKIPPED`), and a
+file whose tokens change other than by whole `META:` blocks moving is refused (`FL-FORMAT REFUSED`); neither is ever
+written, and a refused file fails the run. Without either property the tests do nothing. Add
+`-i` to Gradle to see the printed lines. Formatting twice is a no-op (tested over the bundled corpus).
+
 ## Run locally
 
 ```bash

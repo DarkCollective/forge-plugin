@@ -74,6 +74,9 @@ tasks {
     test {
         // Run the optional corpus check: ./gradlew test -Dfl.corpus=/path/to/dir-of-.fth-files
         System.getProperty("fl.corpus")?.let { systemProperty("fl.corpus", it) }
+        // Format a directory in place / check it without writing: -Dfl.format=DIR, -Dfl.formatCheck=DIR
+        System.getProperty("fl.format")?.let { systemProperty("fl.format", it) }
+        System.getProperty("fl.formatCheck")?.let { systemProperty("fl.formatCheck", it) }
         // Run the bundled FL runner against a built checkout: ./gradlew test -Dfl.forge=/path/to/forge
         System.getProperty("fl.forge")?.let { systemProperty("fl.forge", it) }
         // FLStyleGuideTest checks every example of the style guide against the formatter
