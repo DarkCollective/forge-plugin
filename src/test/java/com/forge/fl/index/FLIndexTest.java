@@ -137,6 +137,10 @@ public class FLIndexTest extends FLMultiFileTestBase {
         for (FLScope.Decl d : FLScope.of(file).all()) {
             expectedDecls.add("D" + d.vocab() + ":" + d.name() + "@" + d.element().getTextOffset());
         }
+        // choice types are kept apart from words in the scope, and keyed by FLIndex.typeKey in the scan
+        for (FLScope.Decl d : FLScope.of(file).types()) {
+            expectedDecls.add(FLIndex.typeKey(d.vocab(), d.name()) + "@" + d.element().getTextOffset());
+        }
         TreeSet<String> actualDecls = new TreeSet<>();
         TreeSet<String> actualUses = new TreeSet<>();
         for (Map.Entry<String, List<FLIndexEntry>> e : scan.entrySet()) {
@@ -149,8 +153,18 @@ public class FLIndexTest extends FLMultiFileTestBase {
         for (FLWordRef ref : PsiTreeUtil.findChildrenOfType(file, FLWordRef.class)) {
             expectedUses.add("U" + ref.getBareName() + "@" + ref.getTextOffset());
         }
+        // choice<type> in a header is a use of the type name, indexed like a word use
+        for (com.forge.fl.psi.FLChoiceRef ref : PsiTreeUtil.findChildrenOfType(file, com.forge.fl.psi.FLChoiceRef.class)) {
+            expectedUses.add("U" + ref.getBareName() + "@" + ref.getTextOffset());
+        }
         assertEquals(label + ": declarations", expectedDecls, actualDecls);
         assertEquals(label + ": uses", expectedUses, actualUses);
+    }
+
+    public void testScanMatchesPsiOnPublicAndPrivateChoicesAndValues() {
+        assertScanMatchesPsi("choices", "IN: v\nCHOICE: pub option a ; option b ; ;\nCHOICE: _priv option c ; ;\n"
+                + "MEMO: m ( -- int ) 1 ;\nMEMO: _pm ( -- int ) 2 ;\n1 CONSTANT k\n2 CONSTANT _k\n"
+                + "0 VARIABLE x\n0 VARIABLE _x\n: f ( s:choice<_priv> -- int ) k _k x _x pub ;\n");
     }
 
     public void testScanMatchesPsiOnTheBundledCorpus() throws IOException {
