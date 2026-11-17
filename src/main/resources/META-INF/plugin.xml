@@ -1,4 +1,7 @@
-<idea-plugin>
+<!-- require-restart: the plugin keeps state an unload without a restart leaves behind (PSI in open views and the
+     debugger's expression editors, the generated built-in files), which then fails against the newly loaded classes:
+     an update asks for an IDE restart instead. -->
+<idea-plugin require-restart="true">
     <id>com.forge.fl</id>
     <name>Forge FL</name>
     <version>0.1.0</version>

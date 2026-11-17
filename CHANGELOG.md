@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Updating the plugin in a running IDE could log "Language FL doesn't participate in view provider … fragment.fl": the
+  IDE reloaded the plugin without a restart, and a debugger expression editor kept an FL fragment of the old plugin.
+  The plugin now declares `require-restart="true"`, so an update asks for an IDE restart instead. `FLReloadUiTest`
+  checks that the IDE does not offer to reload it.
+
 ### Added (call hierarchy)
 - Call hierarchy for FL words (`callHierarchyProvider`): callers (through aliases too, top-level code as its file,
   `META:` and header references left out) and callees (built-ins as leaves, `recurse` and call cycles not expanded),
