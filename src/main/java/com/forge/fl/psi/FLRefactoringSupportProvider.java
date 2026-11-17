@@ -16,4 +16,19 @@ public class FLRefactoringSupportProvider extends RefactoringSupportProvider {
     public boolean isInplaceRenameAvailable(@NotNull PsiElement element, PsiElement context) {
         return element instanceof FLNamedElement && !FLBuiltins.isBuiltin(element);
     }
+
+    @Override
+    public com.intellij.refactoring.RefactoringActionHandler getIntroduceVariableHandler() {
+        return new com.forge.fl.refactoring.FLIntroduceLocal();
+    }
+
+    @Override
+    public com.intellij.refactoring.RefactoringActionHandler getExtractMethodHandler() {
+        return new com.forge.fl.refactoring.FLExtractWord();
+    }
+
+    @Override
+    public com.intellij.refactoring.changeSignature.ChangeSignatureHandler getChangeSignatureHandler() {
+        return new com.forge.fl.refactoring.FLChangeSignatureHandler();
+    }
 }

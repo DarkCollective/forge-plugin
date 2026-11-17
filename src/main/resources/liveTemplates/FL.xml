@@ -1,0 +1,73 @@
+<templateSet group="FL">
+  <!-- Top level: definitions and blocks, in the layout of docs/FL-STYLE.md -->
+  <template name="wd" value=": $NAME$ ( $IN$ -- $OUT$ )&#10;  $END$ ;" description="Colon definition : name ( -- ) ;" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;name&quot;" alwaysStopAt="true"/>
+    <variable name="IN" expression="" defaultValue="&quot;s:str&quot;" alwaysStopAt="true"/>
+    <variable name="OUT" expression="" defaultValue="&quot;str&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_TOPLEVEL" value="true"/></context>
+  </template>
+  <template name="memo" value="MEMO: $NAME$ ( -- $T$ )&#10;  $END$ ;" description="Memoised zero-input word MEMO: name ( -- T ) ;" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;name&quot;" alwaysStopAt="true"/>
+    <variable name="T" expression="" defaultValue="&quot;record&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_TOPLEVEL" value="true"/></context>
+  </template>
+  <template name="meta" value="META: $NAME$&#10;  doc &quot;$DOC$&quot; ;&#10;  category &quot;$CATEGORY$&quot; ;&#10;  $END$&#10;;" description="META: block with doc and category" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;name&quot;" alwaysStopAt="true"/>
+    <variable name="DOC" expression="" defaultValue="" alwaysStopAt="true"/>
+    <variable name="CATEGORY" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="FL_TOPLEVEL" value="true"/></context>
+  </template>
+  <template name="choice" value="CHOICE: $NAME$&#10;  option $OPTION$ &quot;$HELP$&quot; ;&#10;  $END$&#10;;" description="Shared choice type CHOICE: name option … ;" toReformat="false" toShortenFQNames="false">
+    <variable name="NAME" expression="" defaultValue="&quot;name&quot;" alwaysStopAt="true"/>
+    <variable name="OPTION" expression="" defaultValue="&quot;option&quot;" alwaysStopAt="true"/>
+    <variable name="HELP" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="FL_TOPLEVEL" value="true"/></context>
+  </template>
+
+  <!-- Word bodies: combinators with literal quotations -->
+  <template name="ife" value="[ $THEN$ ] [ $ELSE$ ] if" description="[ then ] [ else ] if" toReformat="false" toShortenFQNames="false">
+    <variable name="THEN" expression="" defaultValue="" alwaysStopAt="true"/>
+    <variable name="ELSE" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="whenq" value="[ $END$ ] when" description="[ … ] when" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="unlessq" value="[ $END$ ] unless" description="[ … ] unless" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="mapq" value="[ $END$ ] map" description="[ … ] map" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="eachq" value="[ $END$ ] each" description="[ … ] each" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="tryq" value="[ $BODY$ ] [ $HANDLER$ ] try" description="[ body ] [ handler ] try" toReformat="false" toShortenFQNames="false">
+    <variable name="BODY" expression="" defaultValue="" alwaysStopAt="true"/>
+    <variable name="HANDLER" expression="" defaultValue="&quot;drop&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+
+  <!-- Surround With (Ctrl+Alt+T / ⌥⌘T): the selection inside -->
+  <template name="q" value="[ $SELECTION$ ]$END$" description="[ … ] (quotation)" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="ifs" value="$COND$ [ $SELECTION$ ] [ $END$ ] if" description="condition [ … ] [ ] if" toReformat="false" toShortenFQNames="false">
+    <variable name="COND" expression="" defaultValue="&quot;true&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="whens" value="$COND$ [ $SELECTION$ ] when$END$" description="condition [ … ] when" toReformat="false" toShortenFQNames="false">
+    <variable name="COND" expression="" defaultValue="&quot;true&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="unlesss" value="$COND$ [ $SELECTION$ ] unless$END$" description="condition [ … ] unless" toReformat="false" toShortenFQNames="false">
+    <variable name="COND" expression="" defaultValue="&quot;false&quot;" alwaysStopAt="true"/>
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="trys" value="[ $SELECTION$ ] [ $END$ ] try" description="[ … ] [ handler ] try" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+  <template name="lists" value="{ $SELECTION$ }$END$" description="{ … } (list literal)" toReformat="false" toShortenFQNames="false">
+    <context><option name="FL_BODY" value="true"/></context>
+  </template>
+</templateSet>

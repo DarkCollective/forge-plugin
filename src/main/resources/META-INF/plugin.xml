@@ -29,6 +29,11 @@
         <lang.psiStructureViewFactory language="FL" implementationClass="com.forge.fl.editor.FLStructureViewFactory"/>
         <lang.findUsagesProvider language="FL" implementationClass="com.forge.fl.psi.FLFindUsagesProvider"/>
         <lang.refactoringSupport language="FL" implementationClass="com.forge.fl.psi.FLRefactoringSupportProvider"/>
+        <inlineActionHandler implementation="com.forge.fl.refactoring.FLInlineWord"/>
+        <defaultLiveTemplates file="/liveTemplates/FL.xml"/>
+        <liveTemplateContext contextId="FL" implementation="com.forge.fl.editor.FLTemplateContexts$Any"/>
+        <liveTemplateContext contextId="FL_TOPLEVEL" baseContextId="FL" implementation="com.forge.fl.editor.FLTemplateContexts$TopLevel"/>
+        <liveTemplateContext contextId="FL_BODY" baseContextId="FL" implementation="com.forge.fl.editor.FLTemplateContexts$Body"/>
         <renamePsiElementProcessor implementation="com.forge.fl.psi.FLRenamePsiElementProcessor"/>
         <lang.namesValidator language="FL" implementationClass="com.forge.fl.psi.FLNamesValidator"/>
         <renameInputValidator implementation="com.forge.fl.psi.FLParameterRenameValidator"/>

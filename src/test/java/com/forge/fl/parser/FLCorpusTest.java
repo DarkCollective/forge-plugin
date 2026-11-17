@@ -76,6 +76,52 @@ public class FLCorpusTest extends FLTestBase {
         for (String pr : problems) System.out.println("FL-EFFECTS PROBLEM " + pr);
     }
 
+    /**
+     * The refactorings planned over a real corpus (-Dfl.corpus): Extract word on every whole body and Inline word on
+     * every word, so that a planning crash shows up. Prints FL-REFACTOR lines with the counts; fails on a crash.
+     */
+    public void testExternalCorpusRefactoringPlans() throws IOException {
+        String dir = System.getProperty("fl.corpus");
+        if (dir == null || dir.isBlank()) return;
+        List<PsiFile> psi = new java.util.ArrayList<>();
+        for (Path p : filesIn(Path.of(dir))) psi.add(myFixture.addFileToProject(p.getFileName().toString(), Files.readString(p)));
+        int extracted = 0, extractRefused = 0, inlinable = 0, inlineRefused = 0, calls = 0;
+        java.util.Map<String, Integer> reasons = new java.util.TreeMap<>();
+        List<String> crashes = new java.util.ArrayList<>();
+        for (PsiFile f : psi) {
+            for (com.forge.fl.psi.FLDefinition def : PsiTreeUtil.findChildrenOfType(f, com.forge.fl.psi.FLDefinition.class)) {
+                List<PsiElement> body = com.forge.fl.effects.FLStackAnalysis.bodyItems(def);
+                try {
+                    if (!body.isEmpty()) {
+                        com.forge.fl.refactoring.FLExtractWord.plan(f, body.get(0).getTextRange().getStartOffset(),
+                                body.get(body.size() - 1).getTextRange().getEndOffset());
+                        extracted++;
+                    }
+                } catch (com.forge.fl.refactoring.FLSelection.Refused e) {
+                    extractRefused++;
+                    reasons.merge("extract: " + e.getMessage().replaceAll("'[^']*'", "'…'"), 1, Integer::sum);
+                } catch (RuntimeException e) {
+                    crashes.add(f.getName() + " " + def.getName() + " extract: " + e);
+                }
+                try {
+                    com.forge.fl.refactoring.FLInlineWord.Plan plan = com.forge.fl.refactoring.FLInlineWord.plan(def);
+                    inlinable++;
+                    calls += plan.inlinable().size();
+                } catch (com.forge.fl.refactoring.FLSelection.Refused e) {
+                    inlineRefused++;
+                    reasons.merge("inline: " + e.getMessage().replaceAll("'[^']*'", "'…'"), 1, Integer::sum);
+                } catch (RuntimeException e) {
+                    crashes.add(f.getName() + " " + def.getName() + " inline: " + e);
+                }
+            }
+        }
+        System.out.println("FL-REFACTOR extract=" + extracted + " extractRefused=" + extractRefused + " inline=" + inlinable
+                + " inlineRefused=" + inlineRefused + " inlinableCalls=" + calls + " crashes=" + crashes.size());
+        reasons.forEach((k, v) -> System.out.println("FL-REFACTOR REASON " + v + " " + k));
+        for (String c : crashes) System.out.println("FL-REFACTOR CRASH " + c);
+        assertEquals(List.of(), crashes);
+    }
+
     /** Runs only with -Dfl.corpus=/path/to/vocab (see build.gradle.kts). */
     public void testExternalCorpus() throws IOException {
         String dir = System.getProperty("fl.corpus");

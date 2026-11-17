@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (refactorings and templates)
+- Extract word, with the header inferred from the selection's stack effect and the locals it reads.
+- Inline word, for one call or all (deleting the word, its comment and its `META:` blocks); arguments that are simple
+  values are written into the body, other named inputs are bound inside `[ … ] call`.
+- Introduce `:>` local, optionally replacing later identical code in the local's scope.
+- Change signature: rename, reorder, add and remove inputs, change outputs; updates the body, the `META: param`
+  clauses and the calls whose moving arguments are simple values right before them.
+- Live templates (`wd`, `memo`, `meta`, `choice`, `ife`, `whenq`, `unlessq`, `mapq`, `eachq`, `tryq`) and Surround
+  With templates (`[ ]`, `if`, `when`, `unless`, `try`, `{ }`), with FL, Top level and Word body contexts.
+- `FLStackAnalysis.effectOf` (the effect of a run of items) and `FLSelection` (whole items of a selection).
+- Tests: `FLRefactoringsTest`, `FLLiveTemplatesTest`, `FLRefactoringSemanticsTest` (with `-Dfl.forge`: refactors four
+  vocabularies and runs their vectors in a scratch copy of the checkout) and `FL-REFACTOR` lines in `FLCorpusTest`.
+
 ### Added (stack effects)
 - Stack effect inference for every colon and `MEMO:` body (`FLStackAnalysis`): follows the stack through literals,
   locals, `:>`, calls (by their headers), `if`/`when`/`unless`/`call`/`try` with literal quotations, `exit`, `.s`,

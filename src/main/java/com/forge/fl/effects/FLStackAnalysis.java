@@ -153,6 +153,23 @@ public final class FLStackAnalysis {
                 end == State.FAILED);
     }
 
+    /**
+     * The stack effect of a run of body items on their own: how many values below them they take and how many they
+     * leave, or null when the analysis cannot follow them or they end the word ({@code exit}, a failure). Locals are
+     * those of {@code def}.
+     */
+    @Nullable
+    public static int[] effectOf(@NotNull FLDefinition def, @NotNull List<PsiElement> items) {
+        FLEffect effect = FLEffect.of(def.getHeader());
+        if (effect == null) return null;
+        Analyzer a = new Analyzer(def, effect);
+        a.relative++;
+        a.minDepth = PHANTOMS;
+        State end = a.run(items, new State(new ArrayList<>(Collections.nCopies(PHANTOMS, null))));
+        if (end == null || end.terminal()) return null;
+        return new int[]{PHANTOMS - a.minDepth, end.depth() - a.minDepth};
+    }
+
     /** The items of a definition body: after the header and the declarations, before the {@code ;}. */
     @NotNull
     public static List<PsiElement> bodyItems(@NotNull FLDefinition def) {
@@ -232,6 +249,12 @@ public final class FLStackAnalysis {
         int relative;
         /** Inside the body or handler of a {@code try}: the floor is the try's, so {@code clear} is not followed. */
         int inTry;
+        /** The lowest depth reached (for the effect of a selection, analysed above phantom values). */
+        int minDepth = Integer.MAX_VALUE;
+
+        void popped(State s) {
+            minDepth = Math.min(minDepth, s.depth());
+        }
 
         Analyzer(FLDefinition def, FLEffect effect) {
             this.def = def;
@@ -266,6 +289,7 @@ public final class FLStackAnalysis {
                     return null;
                 }
                 s.stack.remove(s.depth() - 1);
+                popped(s);
                 return s;
             }
             if (t == FLTokenTypes.RECURSE_KW) {
@@ -303,7 +327,7 @@ public final class FLStackAnalysis {
                         case ".s":
                             return s;
                         case "clear":
-                            if (inTry > 0) return null;
+                            if (inTry > 0 || relative > 0) return null;
                             s.stack.clear();
                             return s;
                         case "cond":
@@ -348,6 +372,7 @@ public final class FLStackAnalysis {
             }
             arguments.put(at, Collections.unmodifiableList(args));
             for (int k = 0; k < n; k++) s.stack.remove(s.depth() - 1);
+            popped(s);
             return true;
         }
 

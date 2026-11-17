@@ -67,6 +67,8 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
 - running the op test vectors in the test runner window (see *Op test vectors* below)
 - stack effect checking, stack depth hints, parameter name hints and parameter info (Ctrl+P / ⌘P), from one
   inference of each body (see *Stack effects* below)
+- refactorings Extract word, Inline word, Introduce `:>` local and Change signature, and live templates with
+  Surround With (see *Refactorings and templates* below)
 
 ## Stack effects
 
@@ -96,6 +98,43 @@ never guesses. Types are not checked. Over the 208 vocabularies of Forge (3,253 
 end. Its first run found two real underflows in paths no test reached (`colour.fth:26`, `jwk.fth:84`), which led to
 four fixes in Forge (`28483ff`); it now reports none. `-Dfl.corpus` prints the same as `FL-EFFECTS` lines (the list
 never fails the run).
+
+## Refactorings and templates
+
+They work on whole body items (words, literals, quotations, list literals, `:>` binds) and use the stack effect
+inference above.
+
+- **Extract word** (*Refactor | Extract Method*, ⌥⌘M / Ctrl+Alt+M): the selection becomes a new colon definition
+  placed before the word (and its comment), and the selection a call. The header is inferred: the values the
+  selection takes and leaves become `any` inputs and outputs, each local it reads a named input with the parameter's
+  type (no default), pushed by name at the call: `a b + n *` becomes `a b n _f-part`. Refused: a selection with
+  `exit` or `recurse`, a `:>` local used after it, an effect that cannot be inferred; a public name for a word that
+  takes more than one stack value (its parameters would have to be named).
+- **Inline word** (*Refactor | Inline*, ⌥⌘N / Ctrl+Alt+N): a call becomes the body. Named inputs whose arguments are
+  literals, locals or constants right before the call are written into the body (`5 twice` becomes `5 2 *`);
+  otherwise they are bound with `:>` inside `[ … ] call`, which keeps them scoped. *All calls* also deletes the word,
+  its comment and its `META:` blocks once nothing else refers to it. Refused: `MEMO:` words, `exit`, `recurse`, a
+  named input below an anonymous one; per call, another file or vocabulary, a `{ }` literal when locals are bound, a
+  caller local that would clash with or capture a name of the body.
+- **Introduce `:>` local** (*Refactor | Introduce Variable*, ⌥⌘V / Ctrl+Alt+V): code that pushes exactly one value
+  and takes none is bound and pushed again: `a b + c *` becomes `a b + :> sum sum c *`, or `a b + :> sum` on its own
+  line when the selection starts the line. Later identical code in the local's scope can be replaced too.
+- **Change signature** (*Refactor | Change Signature*, ⌘F6 / Ctrl+F6): a table of inputs (rename, reorder, add with a
+  value at calls, remove) and the outputs. It updates the header, renamed parameters in the body, the `META: param`
+  clauses (renamed, removed, reordered to header order) and the calls, where the arguments that move are literals,
+  quotations, list literals, locals or constants right before the call; other calls are listed and left as they
+  are. Anonymous inputs cannot be added, removed or reordered (the body has them on its stack), and a parameter the
+  body uses cannot be removed.
+- **Live templates** (*Settings | Editor | Live Templates | FL*): at the top level `wd` (`: name ( s:str -- str ) ;`),
+  `memo`, `meta` and `choice` in the style guide's layout; in a body `ife` (`[ ] [ ] if`), `whenq`, `unlessq`,
+  `mapq`, `eachq`, `tryq`. **Surround With** (⌥⌘T / Ctrl+Alt+T) on a selection in a body: `[ … ]`,
+  `cond [ … ] [ ] if`, `cond [ … ] when`, `cond [ … ] unless`, `[ … ] [ ] try`, `{ … }`. The contexts are *FL*, *Top
+  level* and *Word body*.
+
+With `-Dfl.forge`, `FLRefactoringSemanticsTest` checks that the refactorings keep behaviour using Forge itself: in
+four vocabularies it inlines every private helper it can (50 calls) and extracts every body it can (64 words), writes
+the results into a scratch copy of the checkout, and runs their op test vectors there (134, all passing).
+`-Dfl.corpus` also plans both refactorings on every word of the corpus (`FL-REFACTOR` lines; no crash allowed).
 
 ## Running FL
 
