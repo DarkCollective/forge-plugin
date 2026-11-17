@@ -93,8 +93,9 @@ them inline (the handler with the error record), `exit` is checked like the end 
 The check is partial on purpose: anything it cannot follow (a word that does not resolve to one declaration, a
 quotation that is not literal, `cond`, `case`, a malformed token) ends the analysis of the rest of that body, so it
 never guesses. Types are not checked. Over the 208 vocabularies of Forge (3,253 words) it follows 2,941 bodies to the
-end and reports two problems, both real: underflows in error paths that no test reaches (`colour.fth:26` and
-`jwk.fth:84`). `-Dfl.corpus` prints the same as `FL-EFFECTS` lines (the list never fails the run).
+end. Its first run found two real underflows in paths no test reached (`colour.fth:26`, `jwk.fth:84`), which led to
+four fixes in Forge (`28483ff`); it now reports none. `-Dfl.corpus` prints the same as `FL-EFFECTS` lines (the list
+never fails the run).
 
 ## Running FL
 
