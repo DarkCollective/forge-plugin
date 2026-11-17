@@ -30,6 +30,7 @@
         <lang.findUsagesProvider language="FL" implementationClass="com.forge.fl.psi.FLFindUsagesProvider"/>
         <lang.refactoringSupport language="FL" implementationClass="com.forge.fl.psi.FLRefactoringSupportProvider"/>
         <inlineActionHandler implementation="com.forge.fl.refactoring.FLInlineWord"/>
+        <callHierarchyProvider language="FL" implementationClass="com.forge.fl.hierarchy.FLCallHierarchyProvider"/>
         <defaultLiveTemplates file="/liveTemplates/FL.xml"/>
         <liveTemplateContext contextId="FL" implementation="com.forge.fl.editor.FLTemplateContexts$Any"/>
         <liveTemplateContext contextId="FL_TOPLEVEL" baseContextId="FL" implementation="com.forge.fl.editor.FLTemplateContexts$TopLevel"/>

@@ -69,6 +69,8 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   inference of each body (see *Stack effects* below)
 - refactorings Extract word, Inline word, Introduce `:>` local and Change signature, and live templates with
   Surround With (see *Refactorings and templates* below)
+- call hierarchy (*Navigate | Call Hierarchy*, ⌃⌥H / Ctrl+Alt+H) for words: callers and callees, each with its stack
+  effect and location (see *Call hierarchy* below)
 
 ## Stack effects
 
@@ -135,6 +137,22 @@ With `-Dfl.forge`, `FLRefactoringSemanticsTest` checks that the refactorings kee
 four vocabularies it inlines every private helper it can (50 calls) and extracts every body it can (64 words), writes
 the results into a scratch copy of the checkout, and runs their op test vectors there (134, all passing).
 `-Dfl.corpus` also plans both refactorings on every word of the corpus (`FL-REFACTOR` lines; no crash allowed).
+
+## Call hierarchy
+
+*Navigate | Call Hierarchy* (⌃⌥H / Ctrl+Alt+H) on a word, a use of one or inside a definition opens the platform's
+Hierarchy window for it:
+
+- **Callers**: the words whose bodies call it, across the project, grouped per caller with the number of uses
+  (`3 uses`), including calls through its aliases (`META: … alias`); top-level code shows as its file. References in
+  `META:` blocks (`see-also`, `inverse`, the target) and in headers are not calls.
+- **Callees**: the words and primitives its body calls, quotations included; locals, constants and variables are not
+  calls. Built-in words are leaves, marked *built-in*; `recurse` shows the word itself, marked *recursive*, and a word
+  already on the path is not expanded again.
+
+Each node reads `vocab:name ( stack effect )  file.fth:line`. Children are in call-site order (the order the body
+uses its callees; callers by file and position), or alphabetical with the window's sort button. Double-click opens
+the first call site. The scope list (All, Project, …) applies to callers.
 
 ## Running FL
 

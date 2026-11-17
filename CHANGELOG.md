@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (call hierarchy)
+- Call hierarchy for FL words (`callHierarchyProvider`): callers (through aliases too, top-level code as its file,
+  `META:` and header references left out) and callees (built-ins as leaves, `recurse` and call cycles not expanded),
+  each node with its stack effect and location, in call-site order.
+- `FLCallHierarchyTest`, and a call hierarchy step in the UI tests (callers, then the window's Callee button).
+
 ### Added (UI tests)
 - `runIdeForUiTests` (a sandbox IDE with the Remote Robot server) and `uiTest`: the refactoring dialogs, hints,
   inspection, parameter info, a live template and Surround With, driven in a real IDE without OS input, with

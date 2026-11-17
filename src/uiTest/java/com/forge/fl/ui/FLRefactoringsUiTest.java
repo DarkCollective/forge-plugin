@@ -262,6 +262,41 @@ public class FLRefactoringsUiTest {
         ide.screenshot("surround-done");
     }
 
+    /** Navigate | Call Hierarchy on sum-times (extracted above): its caller total, then its callees. */
+    @Test
+    public void e1_callHierarchy() throws Exception {
+        ide.caret("sum-times (", null, 2);
+        ide.action("CallHierarchy");
+        ide.waitFor("the hierarchy window", "(function(){ var tw = com.intellij.openapi.wm.ToolWindowManager.getInstance(project()).getToolWindow('Hierarchy'); return tw != null && tw.isVisible(); })()", 20);
+        Thread.sleep(1500);
+        ide.screenshot("call-hierarchy-callers");
+        String callers = ide.call(TREE);
+        System.out.println("UI-CALLERS " + callers);
+        assertTrue(callers, callers.contains("demo:sum-times") && callers.contains("demo:total"));
+        // the window's own Callee Hierarchy button
+        ide.run("""
+                var tw = com.intellij.openapi.wm.ToolWindowManager.getInstance(project()).getToolWindow('Hierarchy');
+                var bs = find(tw.getComponent(), function (c) { return String(c.getClass().getName()).indexOf('ActionButton') >= 0 && c.isShowing()
+                    && String(c.getAccessibleContext().getAccessibleName()).indexOf('Callee') >= 0; }, []);
+                if (bs.length == 0) throw 'no Callee button';
+                var b = bs[0]; later(function () { b.click(); });
+                """);
+        Thread.sleep(1500);
+        String callees = ide.call(TREE);
+        System.out.println("UI-CALLEES " + callees);
+        assertTrue(callees, callees.contains("core:+") && callees.contains("core:*"));
+        ide.screenshot("call-hierarchy-callees");
+    }
+
+    /** The rows of the hierarchy tree that is showing, expanded two levels. */
+    static final String TREE = """
+            var tw = com.intellij.openapi.wm.ToolWindowManager.getInstance(project()).getToolWindow('Hierarchy');
+            var trees = find(tw.getComponent(), function (c) { return c instanceof javax.swing.JTree && c.isShowing(); }, []);
+            var t = trees[0]; for (var i = 0; i < t.getRowCount() && i < 20; i++) t.expandRow(i);
+            var rows = []; for (var j = 0; j < t.getRowCount(); j++) rows.push(String(t.getPathForRow(j).getLastPathComponent()));
+            rows.join(' | ');
+            """;
+
     @Test
     public void z_save() throws Exception {
         Files.writeString(Path.of(System.getProperty("ui.screenshots", "build/ui-screenshots"), "demo-after.fth"), ide.text());
