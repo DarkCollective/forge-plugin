@@ -280,7 +280,10 @@ public final class FLInlineWord extends InlineActionHandler {
             return;
         }
         int n = plan.inlinable().size();
-        String message = "Inline '" + def.getName() + "' as " + FLSelection.shorten(plan.code().isEmpty() ? "nothing" : plan.code()) + "?"
+        List<PsiElement> body = FLStackAnalysis.bodyItems(def);
+        String bodyText = body.isEmpty() ? "(empty)" : FLSelection.shorten(def.getContainingFile().getText().substring(
+                body.get(0).getTextRange().getStartOffset(), body.get(body.size() - 1).getTextRange().getEndOffset()));
+        String message = "Inline the body of '" + def.getName() + "' (" + bodyText + ") into its calls?"
                 + (blocked.isEmpty() ? "" : "\n\n" + blocked.size() + " call(s) cannot be inlined and stay:\n" + String.join("\n", blocked));
         String[] options = here != null
                 ? new String[]{"All " + n + " Calls and Remove the Word", "This Call Only", "Cancel"}

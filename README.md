@@ -284,6 +284,20 @@ ambiguous=..`; the run fails when either count is not zero). Without the propert
 `-Dfl.corpus`, `FL-META-PLACEMENT` lines list the `META:` blocks that are not next to their definition (FL-STYLE.md §7);
 that is a style rule, so the list never fails the run.
 
+## UI tests
+
+`src/uiTest` drives a real sandbox IDE through Remote Robot: the refactoring dialogs, the inlay hints and the
+inspection in the editor, parameter info, a live template and Surround With, each checked on the file text and
+screenshotted into `build/ui-screenshots`. Actions are invoked and dialogs filled through their Swing components
+(JavaScript run inside the IDE), and screenshots are the windows painted into images, so it needs no accessibility or
+screen-recording permission and runs with nobody at the machine. Parameter info stops at what the handler finds: its
+popup needs keyboard focus, which macOS does not give an IDE in the background.
+
+```bash
+./gradlew runIdeForUiTests    # opens build/ui-project (with its demo.fth) and the robot server on port 8082
+./gradlew uiTest              # in another terminal, once the IDE is up
+```
+
 ## Formatting a directory without the IDE
 
 The formatter and the META-placement fix (Reformat File with Code cleanup) can run over a directory of `.fth`/`.fl`

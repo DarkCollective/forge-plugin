@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (UI tests)
+- `runIdeForUiTests` (a sandbox IDE with the Remote Robot server) and `uiTest`: the refactoring dialogs, hints,
+  inspection, parameter info, a live template and Surround With, driven in a real IDE without OS input, with
+  screenshots in `build/ui-screenshots`.
+
+### Changed
+- The Inline Word dialog names the word's body instead of the bound `[ :> … ] call` form, which a call with simple
+  arguments does not get.
+
 ### Added (refactorings and templates)
 - Extract word, with the header inferred from the selection's stack effect and the locals it reads.
 - Inline word, for one call or all (deleting the word, its comment and its `META:` blocks); arguments that are simple

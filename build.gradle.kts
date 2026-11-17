@@ -13,10 +13,16 @@ version = "0.1.0"
 
 repositories {
     mavenCentral()
+    // Remote Robot (UI tests driving a running IDE): the client library and the robot server plugin
+    maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
     intellijPlatform {
         defaultRepositories()
     }
 }
+
+// UI tests (src/uiTest): drive the IDE started by runIdeForUiTests through its robot server. Never part of `test`.
+val uiTest: SourceSet by sourceSets.creating
+val uiTestImplementation: Configuration by configurations.getting
 
 java {
     // Gradle itself runs on any JDK 17+; code is compiled and tested on a Java 17 toolchain
@@ -28,6 +34,8 @@ java {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    uiTestImplementation("junit:junit:4.13.2")
+    uiTestImplementation("com.intellij.remoterobot:remote-robot:0.11.23")
 
     intellijPlatform {
         // Compile and test against the oldest supported platform (since-build 241).
@@ -55,6 +63,54 @@ intellijPlatform {
             create(IntelliJPlatformType.IntellijIdea, "2026.3")
         }
     }
+}
+
+// The sandbox IDE for UI tests: ./gradlew runIdeForUiTests (opens build/ui-project), then ./gradlew uiTest.
+val uiProject = layout.buildDirectory.dir("ui-project")
+intellijPlatformTesting {
+    runIde {
+        register("runIdeForUiTests") {
+            task {
+                jvmArgumentProviders += CommandLineArgumentProvider {
+                    listOf(
+                        "-Drobot-server.port=8082",
+                        "-Dide.mac.message.dialogs.as.sheets=false",
+                        "-Didea.trust.all.projects=true",
+                        "-Dide.show.tips.on.startup.default.value=false",
+                        "-Djb.privacy.policy.text=<!--999.999-->",
+                        "-Djb.consents.confirmation.enabled=false",
+                        "-Didea.suppress.statistics.report=true",
+                        "-Dide.mac.file.chooser.native=false",
+                        "-Dapple.laf.useScreenMenuBar=false",
+                    )
+                }
+                args(uiProject.get().asFile.absolutePath)
+                // the project the UI tests work in; uiTest writes demo.fth's content itself
+                doFirst {
+                    val demo = uiProject.get().file("demo.fth").asFile
+                    if (!demo.exists()) {
+                        demo.parentFile.mkdirs()
+                        demo.writeText("IN: demo\n")
+                    }
+                }
+            }
+            plugins {
+                robotServerPlugin("0.11.23")
+            }
+        }
+    }
+}
+
+tasks.register<Test>("uiTest") {
+    description = "Drives the IDE of runIdeForUiTests (start it first) through Remote Robot"
+    testClassesDirs = uiTest.output.classesDirs
+    classpath = uiTest.runtimeClasspath
+    useJUnit()
+    outputs.upToDateWhen { false }
+    // the Remote Robot client's Gson reads Throwable fields
+    jvmArgs("--add-opens", "java.base/java.lang=ALL-UNNAMED")
+    systemProperty("ui.screenshots", layout.buildDirectory.dir("ui-screenshots").get().asFile.absolutePath)
+    systemProperty("ui.project", uiProject.get().asFile.absolutePath)
 }
 
 tasks {
