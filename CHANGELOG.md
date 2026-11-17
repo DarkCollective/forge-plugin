@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- Run on several selected vectors files (or vocabulary `.fth` files) in the Project view ran only the first one; it now
+  runs all of them in one FL Vectors configuration (`base32, hex vectors`), and every file when the `vocab` folder is
+  among them.
 - Updating the plugin in a running IDE could log "Language FL doesn't participate in view provider … fragment.fl": the
   IDE reloaded the plugin without a restart, and a debugger expression editor kept an FL fragment of the old plugin.
   The plugin now declares `require-restart="true"`, so an update asks for an IDE restart instead. `FLReloadUiTest`

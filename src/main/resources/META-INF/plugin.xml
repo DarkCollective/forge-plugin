@@ -3,7 +3,7 @@
      an update asks for an IDE restart instead. -->
 <idea-plugin require-restart="true">
     <id>com.forge.fl</id>
-    <name>Forge FL</name>
+    <name>Forge Language (FL)</name>
     <version>0.1.0</version>
     <vendor email="david@darkcollective.com" url="https://github.com/DarkCollective/forge">DarkCollective</vendor>
 
@@ -13,7 +13,6 @@
 
     <depends>com.intellij.modules.lang</depends>
     <depends>com.intellij.modules.xdebugger</depends>
-
 
     <extensions defaultExtensionNs="com.intellij">
         <fileType name="FL / FTH"

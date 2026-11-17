@@ -126,7 +126,9 @@ public final class FLVectorsRunConfiguration extends RunConfigurationBase<Object
             return vocab + " vectors";
         }
         if (!op.isBlank()) return op.strip() + " vectors";
-        return files.isEmpty() ? "Forge vectors" : files.size() + " vector files";
+        if (files.isEmpty()) return "Forge vectors";
+        if (files.size() <= 3) return String.join(", ", files.stream().map(FLVectorFiles::vocabOf).toList()) + " vectors";
+        return files.size() + " vector files";
     }
 
     @Override

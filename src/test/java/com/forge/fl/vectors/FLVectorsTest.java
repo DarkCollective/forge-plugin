@@ -175,6 +175,43 @@ public class FLVectorsTest extends FLTestBase {
         assertNull(FLVectorsConfigurationProducer.selectionAt(elsewhere.findElementAt(0)));
     }
 
+    /** Run on a selection in the Project view, as the platform builds the context: two files, and the vocab folder. */
+    public void testRunOnSeveralSelectedFilesAndOnTheFolder() throws Exception {
+        VirtualFile dir = vocabDir();
+        java.nio.file.Files.writeString(FLForgeEnvironment.vocabDir(checkout).resolve("hex.test.json"), "[]\n");
+        dir.refresh(false, true);
+        PsiManager psi = PsiManager.getInstance(getProject());
+        PsiFile base32 = psi.findFile(dir.findChild("base32.test.json"));
+        PsiFile hex = psi.findFile(dir.findChild("hex.test.json"));
+        FLVectorsRunConfiguration two = fromContext(base32, base32, hex);
+        assertNotNull(two);
+        assertEquals(List.of("base32.test.json", "hex.test.json"), two.getFiles());
+        assertEquals(Map.of(), two.getEntries());
+        assertEquals("base32, hex vectors", two.suggestedName());
+        FLVectorsRunConfiguration all = fromContext(psi.findDirectory(dir));
+        assertNotNull(all);
+        assertEquals(List.of(), all.getFiles());
+        assertEquals("Forge vectors", all.getName());
+        // a vocabulary's .fth file with its vectors file: the one file
+        FLVectorsRunConfiguration same = fromContext(base32, base32, psi.findFile(dir.findChild("base32.fth")));
+        assertEquals(List.of("base32.test.json"), same.getFiles());
+    }
+
+    /** The FL Vectors configuration the platform makes for a selection (the first element is the one under the mouse). */
+    private FLVectorsRunConfiguration fromContext(PsiElement first, PsiElement... selected) {
+        com.intellij.openapi.actionSystem.DataContext data = com.intellij.openapi.actionSystem.impl.SimpleDataContext.builder()
+                .add(com.intellij.openapi.actionSystem.CommonDataKeys.PROJECT, getProject())
+                .add(com.intellij.openapi.actionSystem.CommonDataKeys.PSI_ELEMENT, first)
+                .add(com.intellij.openapi.actionSystem.LangDataKeys.PSI_ELEMENT_ARRAY, selected.length == 0 ? new PsiElement[]{first} : selected)
+                .add(com.intellij.openapi.actionSystem.PlatformCoreDataKeys.MODULE, myFixture.getModule())
+                .build();
+        com.intellij.execution.actions.ConfigurationContext context = com.intellij.execution.actions.ConfigurationContext.getFromContext(data, "ProjectViewPopup");
+        List<com.intellij.execution.actions.ConfigurationFromContext> made = context.createConfigurationsFromContext();
+        if (made == null) return null;
+        return made.stream().map(c -> c.getConfiguration()).filter(c -> c instanceof FLVectorsRunConfiguration)
+                .map(c -> (FLVectorsRunConfiguration) c).findFirst().orElse(null);
+    }
+
     public void testLocations() throws Exception {
         VirtualFile dir = vocabDir();
         myFixture.addFileToProject("base32.fth", "IN: base32\n: encode ( s:str -- str ) s ;\n");

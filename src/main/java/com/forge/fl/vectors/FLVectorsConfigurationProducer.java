@@ -44,7 +44,7 @@ public final class FLVectorsConfigurationProducer extends LazyRunConfigurationPr
     protected boolean setupConfigurationFromContext(@NotNull FLVectorsRunConfiguration configuration,
                                                     @NotNull ConfigurationContext context,
                                                     @NotNull Ref<PsiElement> sourceElement) {
-        Selection s = selectionAt(context.getPsiLocation());
+        Selection s = selectionOf(context);
         if (s == null) return false;
         configuration.setCheckout(s.checkout().toString());
         configuration.setFiles(s.files());
@@ -57,12 +57,42 @@ public final class FLVectorsConfigurationProducer extends LazyRunConfigurationPr
     @Override
     public boolean isConfigurationFromContext(@NotNull FLVectorsRunConfiguration configuration,
                                               @NotNull ConfigurationContext context) {
-        Selection s = selectionAt(context.getPsiLocation());
+        Selection s = selectionOf(context);
         return s != null
                 && Objects.equals(configuration.effectiveCheckout(), s.checkout())
                 && configuration.getFiles().equals(s.files())
                 && configuration.getOp().strip().equals(s.op())
                 && configuration.getEntries().equals(s.entries());
+    }
+
+    /**
+     * What runs from a context: with several elements selected (in the Project view), the files of all of them, or
+     * every file when the vocabulary directory is among them; else what runs from the one element.
+     */
+    @Nullable
+    static Selection selectionOf(@NotNull ConfigurationContext context) {
+        PsiElement[] selected = context.containsMultipleSelection()
+                ? com.intellij.openapi.actionSystem.LangDataKeys.PSI_ELEMENT_ARRAY.getData(context.getDataContext()) : null;
+        if (selected == null || selected.length < 2) return selectionAt(context.getPsiLocation());
+        return merged(selected);
+    }
+
+    /** The union of whole files of several selected elements; null when one of them is not about vectors. */
+    @Nullable
+    static Selection merged(@NotNull PsiElement[] elements) {
+        Path checkout = null;
+        java.util.TreeSet<String> files = new java.util.TreeSet<>();
+        boolean all = false;
+        for (PsiElement e : elements) {
+            Selection s = selectionAt(e instanceof PsiDirectory ? e : e.getContainingFile());
+            if (s == null) return null;
+            if (checkout != null && !checkout.equals(s.checkout())) return null;
+            checkout = s.checkout();
+            if (s.files().isEmpty()) all = true;
+            files.addAll(s.files());
+        }
+        if (checkout == null) return null;
+        return new Selection(checkout, all ? List.of() : List.copyOf(files), "", Map.of());
     }
 
     /** What runs from {@code element}, or null when it is not in a checkout's vocabulary directory. */

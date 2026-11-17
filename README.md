@@ -240,8 +240,8 @@ Ways to run:
 
 - the ▶ on the opening `[` of a vectors file (all of it) and on each entry, which also shows the entry's last result;
 - the ▶ menu of a word in a bundled vocabulary: *Run 'base32:encode vectors'*, when its file has vectors for it;
-- *Run* in the context menu of a vectors file, an `.fth` file of `packages/ops/vocab` (its vocabulary's vectors), or
-  the `vocab` directory itself (all files);
+- *Run* in the context menu of a vectors file, an `.fth` file of `packages/ops/vocab` (its vocabulary's vectors), several
+  of them selected together (all their files in one run), or the `vocab` directory itself (all files);
 - the **FL Vectors** run configuration: checkout, Node.js, files (default all), an op (an alias works) and entries
   (`base32.test.json:0,3`).
 
