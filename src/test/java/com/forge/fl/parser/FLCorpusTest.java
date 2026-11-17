@@ -3,6 +3,7 @@ package com.forge.fl.parser;
 
 import com.forge.fl.FLTestBase;
 import com.forge.fl.psi.FLWordRef;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.ResolveResult;
 import com.intellij.psi.util.PsiTreeUtil;
@@ -40,6 +41,39 @@ public class FLCorpusTest extends FLTestBase {
         List<Path> files = filesIn(Path.of("src/test/testData/corpus"));
         assertTrue("corpus files missing", files.size() >= 4);
         assertEmpty(parseAll(files));
+    }
+
+    /**
+     * Stack effect inference over a real corpus (-Dfl.corpus): working code, so every problem is a false positive or a
+     * real bug (in a path no test reaches). Prints FL-EFFECTS words=.. analysed=.. complete=.. problems=.. and each
+     * problem; like FL-META-PLACEMENT, the list never fails the run.
+     */
+    public void testExternalCorpusStackEffects() throws IOException {
+        String dir = System.getProperty("fl.corpus");
+        if (dir == null || dir.isBlank()) return;
+        List<Path> files = filesIn(Path.of(dir));
+        List<PsiFile> psi = new java.util.ArrayList<>();
+        for (Path p : files) psi.add(myFixture.addFileToProject(p.getFileName().toString(), Files.readString(p)));
+        int words = 0;
+        int analysed = 0;
+        int complete = 0;
+        List<String> problems = new java.util.ArrayList<>();
+        for (PsiFile f : psi) {
+            com.intellij.openapi.editor.Document doc = com.intellij.psi.PsiDocumentManager.getInstance(getProject()).getDocument(f);
+            for (com.forge.fl.psi.FLDefinition def : PsiTreeUtil.findChildrenOfType(f, com.forge.fl.psi.FLDefinition.class)) {
+                words++;
+                com.forge.fl.effects.FLStackAnalysis a = com.forge.fl.effects.FLStackAnalysis.of(def);
+                if (a.effect() != null) analysed++;
+                java.util.List<PsiElement> body = com.forge.fl.effects.FLStackAnalysis.bodyItems(def);
+                if (a.effect() != null && (body.isEmpty() || a.depthAfter(body.get(body.size() - 1)) != null)) complete++;
+                for (com.forge.fl.effects.FLStackAnalysis.Problem pr : a.problems()) {
+                    int line = doc == null ? 0 : doc.getLineNumber(pr.at().getTextRange().getStartOffset()) + 1;
+                    problems.add(f.getName() + ":" + line + " " + def.getName() + ": " + pr.message());
+                }
+            }
+        }
+        System.out.println("FL-EFFECTS words=" + words + " analysed=" + analysed + " complete=" + complete + " problems=" + problems.size());
+        for (String pr : problems) System.out.println("FL-EFFECTS PROBLEM " + pr);
     }
 
     /** Runs only with -Dfl.corpus=/path/to/vocab (see build.gradle.kts). */

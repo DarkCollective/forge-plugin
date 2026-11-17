@@ -1,0 +1,19 @@
+<html>
+<body>
+Reports stack effect mistakes that can be proved from the headers of the words a body calls
+(docs/LANGUAGE.md sections 7, 8 and 10.5), each an error the engine would raise when that path runs:
+<ul>
+  <li>a body that ends, or reaches an <code>exit</code>, with a stack depth other than its header declares
+    (<code>E_EFFECT</code>);</li>
+  <li>a word or <code>:&gt;</code> that needs more values than the stack holds there (<code>E_STACK_UNDERFLOW</code>);</li>
+  <li>the two ways through <code>if</code>, <code>when</code>, <code>unless</code> or <code>try</code> leaving different
+    depths, in a word whose output is checked;</li>
+  <li>a literal quotation run by <code>each</code>, <code>map</code>, <code>filter</code>, <code>reduce</code>,
+    <code>while</code>, <code>loop</code>, <code>times</code>, a collector or a finder that breaks the depth rule
+    of section 8.</li>
+</ul>
+The check is partial: where a body uses something it cannot follow (a word that does not resolve to one declaration,
+a quotation that is not literal, <code>cond</code> or <code>case</code>), it says nothing about the rest of that body.
+<code>fail</code>, <code>fail-coerce</code>, <code>fail-range</code> and words that always fail end a path.
+</body>
+</html>

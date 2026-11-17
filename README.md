@@ -46,7 +46,7 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
   directly (E_FORBIDDEN), `choice<…>` that does not resolve or is ambiguous, a default that is not one of the
   type's options, duplicate or over-long options, a `CHOICE:` redefined in the file. Errors are an annotator; the weak
   warnings E_TOPLEVEL / `VOCAB` in a file and W_SHADOW are two inspections that can be switched off. Not checked:
-  types, constraints and defaults of headers, stack effects, repeated `doc`/`category`/`version`, string lengths,
+  types, constraints and defaults of headers, stack effects beyond the *Stack effects* check below, repeated `doc`/`category`/`version`, string lengths,
   alias collisions with words of other files, `IN: core`, `PRIMITIVE` registry checks, `MEMO:` purity through
   callees and effect labels (+async, +random, +time), `emit` outside a collector (a run-time rule), whether a
   `checks regex` pattern is valid JavaScript, repeated `expects`
@@ -65,6 +65,36 @@ in [docs/RUN-DEBUG-RESEARCH.md](docs/RUN-DEBUG-RESEARCH.md).
 - color settings page for FL syntax colors
 - running and debugging FL code and words with the Forge engine (see *Running FL* and *Debugging FL* below)
 - running the op test vectors in the test runner window (see *Op test vectors* below)
+- stack effect checking, stack depth hints, parameter name hints and parameter info (Ctrl+P / ⌘P), from one
+  inference of each body (see *Stack effects* below)
+
+## Stack effects
+
+Each colon and `MEMO:` body is followed on an abstract data stack (`com.forge.fl.effects`): it starts with the header's
+anonymous inputs (named inputs are locals, LANGUAGE.md §7) and must end with as many values as the header has outputs
+(§10.5). Literals, locals, constants, variables, `[ ]` and `{ }` push one value; `:>` and `n!` pop one; a call pops
+its header's inputs and pushes its outputs (an alias as its word; a `PRIMITIVE` with the built-in's header). The
+variadic `core` words are followed where their quotations are literal: `if`, `when`, `unless`, `call` and `try` run
+them inline (the handler with the error record), `exit` is checked like the end of the body, `.s` keeps the stack and
+`clear` empties it. `fail`, `fail-coerce`, `fail-range`, and a word every path of which fails, end a path.
+
+- **Inspection** *Stack effect mismatch* (on by default, a warning): a body that ends or exits with the wrong depth
+  (`E_EFFECT`), a word or `:>` that needs more values than the stack holds (`E_STACK_UNDERFLOW`), two ways through
+  `if`/`when`/`unless`/`try` that leave different depths (in a word whose output is checked), and a literal quotation
+  of `each`, `map`, `mapi`, `filter`, `reduce`, `times`, `while`, `loop`, `sort-by`, `find`, `any?`, `all?`,
+  `fork` or a collector that breaks the depth rule of §8.
+- **Stack depth hints** at the end of each line of a body (`→ 2`), where the depth is known; *Settings | Editor |
+  Inlay Hints | Values | Stack depth*.
+- **Parameter name hints** before a literal or a literal quotation that feeds a named input: `"hello" alphabet:"url"
+  padding:false base32:encode`; *Inlay Hints | Parameters*.
+- **Parameter info** (Ctrl+P / ⌘P): on a value, the header of the call that takes it with that input highlighted; on
+  a word, its own header.
+
+The check is partial on purpose: anything it cannot follow (a word that does not resolve to one declaration, a
+quotation that is not literal, `cond`, `case`, a malformed token) ends the analysis of the rest of that body, so it
+never guesses. Types are not checked. Over the 208 vocabularies of Forge (3,253 words) it follows 2,941 bodies to the
+end and reports two problems, both real: underflows in error paths that no test reaches (`colour.fth:26` and
+`jwk.fth:84`). `-Dfl.corpus` prints the same as `FL-EFFECTS` lines (the list never fails the run).
 
 ## Running FL
 

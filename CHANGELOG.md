@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added (stack effects)
+- Stack effect inference for every colon and `MEMO:` body (`FLStackAnalysis`): follows the stack through literals,
+  locals, `:>`, calls (by their headers), `if`/`when`/`unless`/`call`/`try` with literal quotations, `exit`, `.s`,
+  `clear`, and the failure words; stops quietly at anything it cannot follow. Each value remembers what pushed it.
+- The *Stack effect mismatch* inspection: wrong depth at the end or at an `exit`, underflow, branches that leave
+  different depths, loop quotations that break the depth rule of LANGUAGE.md §8.
+- Declarative inlay hints: the stack depth at the end of each line (`fl.stack.depth`), and parameter names before
+  literal arguments (`fl.parameter.names`).
+- Parameter info (Ctrl+P / ⌘P) for FL: the header of the call a value feeds, with that input highlighted.
+- `FLStackEffectsTest`, `FLInlayHintsTest` (the providers through the platform's declarative hints harness), and
+  `FL-EFFECTS` lines in `FLCorpusTest` with `-Dfl.corpus`. Over Forge's vocabularies it reports two real underflows
+  (`colour.fth:26`, `jwk.fth:84`) and no false positives.
+
 ### Added (op test vectors)
 - The **FL Vectors** run configuration: runs the op test vectors and check pairs of `packages/ops/vocab/*.test.json` in
   the test runner window, grouped by file and op, with diffs of expected and actual values, navigation to the JSON
